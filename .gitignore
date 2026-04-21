@@ -1,0 +1,41 @@
+# ── Credentials & secrets ─────────────────────────────────────────────────
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# ── Large data files (too big for GitHub) ────────────────────────────────
+data/raw/train.csv
+data/raw/test.csv
+data/processed/
+data/external/
+
+# ── Large model binaries ──────────────────────────────────────────────────
+outputs/models/*.pkl
+outputs/models/*.joblib
+
+# ── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Jupyter ───────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# ── OS ────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDEs ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+outputs/~$*.xlsx
