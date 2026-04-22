@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Feature Engineering — Full Explanation</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 24px 80px; color: #1a1a1a; line-height: 1.7; background: #fafafa; }
+  h1 { font-size: 2rem; color: #1a1a1a; border-bottom: 3px solid #059669; padding-bottom: 12px; }
+  h2 { font-size: 1.4rem; color: #059669; margin-top: 48px; border-left: 4px solid #059669; padding-left: 12px; }
+  h3 { font-size: 1.1rem; color: #374151; margin-top: 28px; }
+  h4 { font-size: 1rem; color: #6b7280; margin-top: 20px; }
+  code { background: #1e293b; color: #e2e8f0; padding: 2px 7px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.88em; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 8px; overflow-x: auto; font-size: 0.88em; line-height: 1.6; margin: 16px 0; }
+  pre code { background: none; padding: 0; color: inherit; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.93em; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  th { background: #059669; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  blockquote { background: #ecfdf5; border-left: 4px solid #059669; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #065f46; }
+  blockquote p { margin: 0; }
+  .warning { background: #fffbeb; border-left: 4px solid #d97706; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #92400e; }
+  .warning p { margin: 0; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 6px 0; }
+  .feature-badge { display: inline-block; background: #059669; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; margin-right: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<h1>Feature Engineering — Full Explanation in Layman Terms</h1>
+<hr />
+
+<h2>The Big Picture</h2>
+<p>After our baseline Random Forest scored <strong>$25,871 RMSE</strong>, the question is: can we give the model <strong>better information</strong> to learn from?</p>
+<blockquote>
+<p><strong>Feature engineering is the art of creating new columns from existing ones.</strong></p>
+<p>The model can only learn what we show it. If we create smarter, more meaningful columns, it can find better patterns — and make better predictions.</p>
+</blockquote>
+<p>Think of it like this:</p>
+<ul>
+<li>Raw data gives the model GPS coordinates → model has to figure out "this is close to the CBD"</li>
+<li>Engineered data directly gives it <code>dist_to_cbd</code> → model immediately knows "closer to CBD = pricier"</li>
+</ul>
+<p>We engineer <strong>11 new features</strong> in this notebook.</p>
+<hr />
+
+<h2>Why Feature Engineering?</h2>
+<p>The baseline Random Forest scored $25,871. But several raw columns are:</p>
+<ul>
+<li><strong>Redundant</strong> — <code>floor_area_sqft</code> is just <code>floor_area_sqm × 10.764</code></li>
+<li><strong>Implicit</strong> — the model has to guess that lat/lon near Raffles Place = expensive</li>
+<li><strong>Leaking</strong> — <code>resale_price</code> itself could be used to create target-encoded features</li>
+<li><strong>Poorly encoded</strong> — Month 12 and Month 1 look far apart as numbers but are adjacent in a calendar</li>
+</ul>
+<p>Feature engineering addresses all four problems.</p>
+<hr />
+
+<h2>Step 1 — The <code>engineer_features()</code> Function</h2>
+<pre><code class="language-python">def engineer_features(df, is_train=True, town_price_map=None):
+    df = df.copy()
+    ...
+    return df, town_price_map</code></pre>
+<h3>Why wrap everything in a function?</h3>
+<p>We need to apply the <strong>exact same transformations</strong> to both training data and test data. If we write the code twice, we risk making it slightly different — and the model will break.</p>
+<pre><code>train → engineer_features(train, is_train=True)  → X with new columns
+test  → engineer_features(test,  is_train=False) → same new columns</code></pre>
+<p>The <code>is_train</code> parameter matters for one feature — target encoding (see Feature 9 below).</p>
+<hr />
+
+<h2><span class="feature-badge">Feature 1</span> <code>remaining_lease</code></h2>
+<pre><code class="language-python">df['remaining_lease'] = 99 - (df['Tranc_Year'] - df['lease_commence_date'])</code></pre>
+<h3>What is it?</h3>
+<p>HDB flats have a <strong>99-year lease</strong>. Once the lease expires, the flat reverts to HDB with no compensation.</p>
+<pre><code>lease_commence_date = 1985
+Tranc_Year = 2023
+hdb_age = 2023 - 1985 = 38 years
+remaining_lease = 99 - 38 = 61 years remaining</code></pre>
+<h3>Why is this better than <code>hdb_age</code>?</h3>
+<p>Both contain the same information, but remaining_lease is <strong>more interpretable</strong>:</p>
+<ul>
+<li>A buyer thinks "does this flat still have 60 years left?" — not "is this flat 39 years old?"</li>
+<li>Banks also use remaining lease for loan eligibility (cannot loan if lease &lt; 30 years at end of loan)</li>
+<li>The model sees the same signal but framed in the more meaningful direction</li>
+</ul>
+<hr />
+
+<h2><span class="feature-badge">Feature 2</span> <code>dist_to_cbd</code></h2>
+<pre><code class="language-python">CBD_LAT = 1.2830   # Raffles Place MRT
+CBD_LON = 103.8513
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371
+    phi1, phi2 = np.radians(lat1), np.radians(lat2)
+    dphi = np.radians(lat2 - lat1)
+    dlam = np.radians(lon2 - lon1)
+    a = np.sin(dphi/2)**2 + np.cos(phi1)*np.cos(phi2)*np.sin(dlam/2)**2
+    return R * 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
+
+df['dist_to_cbd'] = haversine(df['latitude'], df['longitude'], CBD_LAT, CBD_LON)</code></pre>
+<h3>What is the Haversine formula?</h3>
+<p>GPS coordinates (latitude/longitude) are angles on a sphere (Earth). You cannot calculate straight-line distance with simple subtraction because the Earth is curved.</p>
+<pre><code>Simple subtraction: √((lat2-lat1)² + (lon2-lon1)²) ← WRONG (flat Earth)
+Haversine:          accounts for Earth's radius ← CORRECT (real distance in km)</code></pre>
+<h3>Why <code>dist_to_cbd</code> became the #2 feature?</h3>
+<p>Location is one of the biggest drivers of property price worldwide.</p>
+<ul>
+<li>Before: the model had <code>latitude</code> and <code>longitude</code> as two separate columns</li>
+<li>After: the model has one direct signal — <strong>kilometres from the CBD</strong></li>
+</ul>
+<p>This jumped to the <strong>2nd most important feature</strong> in XGBoost (21.65%), behind only floor area.</p>
+<p>CBD reference point: <strong>Raffles Place MRT</strong> (lat=1.2830, lon=103.8513) — the heart of Singapore's financial district.</p>
+<hr />
+
+<h2><span class="feature-badge">Feature 3</span> <code>is_mature_estate</code></h2>
+<pre><code class="language-python">MATURE_TOWNS = {
+    'ANG MO KIO', 'BEDOK', 'BISHAN', 'BUKIT MERAH', 'BUKIT TIMAH',
+    'CENTRAL AREA', 'CLEMENTI', 'GEYLANG', 'KALLANG/WHAMPOA',
+    'MARINE PARADE', 'PASIR RIS', 'QUEENSTOWN', 'SERANGOON',
+    'TAMPINES', 'TOA PAYOH'
+}
+
+df['is_mature_estate'] = df['town'].isin(MATURE_TOWNS).astype(int)</code></pre>
+<h3>What is a mature estate?</h3>
+<p>HDB officially classifies towns into mature and non-mature:</p>
+<ul>
+<li><strong>Mature</strong>: older, well-developed towns with established amenities, schools, and MRT access</li>
+<li><strong>Non-mature</strong>: newer towns still being developed (e.g. Punggol, Tengah)</li>
+</ul>
+<h3>Why does this matter?</h3>
+<p>Mature estates command a <strong>10–20% price premium</strong> on average because:</p>
+<ul>
+<li>More MRT lines, bus routes, amenities already in place</li>
+<li>Established schools and community facilities</li>
+<li>Proven rental demand</li>
+</ul>
+<p>Rather than expecting the model to learn this implicitly from <code>town</code> alone, we give it a direct binary signal: mature = 1, non-mature = 0.</p>
+<p><code>.astype(int)</code> converts <code>True</code>/<code>False</code> → <code>1</code>/<code>0</code> so the model can process it numerically.</p>
+<hr />
+
+<h2><span class="feature-badge">Feature 4 &amp; 5</span> <code>tranc_month_sin</code> and <code>tranc_month_cos</code></h2>
+<pre><code class="language-python">df['tranc_month_sin'] = np.sin(2 * np.pi * df['Tranc_Month'] / 12)
+df['tranc_month_cos'] = np.cos(2 * np.pi * df['Tranc_Month'] / 12)</code></pre>
+<h3>The problem with month as a number</h3>
+<p>If we use <code>Tranc_Month</code> = 1 to 12 directly, the model treats month like a straight line:</p>
+<pre><code>Jan=1, Feb=2, ... Dec=12</code></pre>
+<p>But December (12) and January (1) are only 1 month apart — not 11 apart. The model sees <code>12 - 1 = 11</code> and thinks they are far apart. This is wrong.</p>
+<h3>Cyclical encoding: the clock analogy</h3>
+<p>Think of months as a <strong>clock face</strong>. On a clock, 12 and 1 are adjacent. We encode this using sine and cosine (two waves that are 90° offset):</p>
+<pre><code>Month 1  (Jan): sin=0.50,  cos=0.87
+Month 3  (Mar): sin=1.00,  cos=0.00
+Month 6  (Jun): sin=0.00,  cos=-1.00
+Month 9  (Sep): sin=-1.00, cos=0.00
+Month 12 (Dec): sin=-0.50, cos=0.87   ← close to Jan (0.50, 0.87) ✓</code></pre>
+<p>December and January are now numerically similar. The model correctly understands seasonal proximity.</p>
+<h3>Why two columns (sin AND cos)?</h3>
+<p>Sin alone is ambiguous — sin(30°) = sin(150°), meaning March and September would look the same. Using both sin and cos together uniquely identifies every month on the circle.</p>
+<hr />
+
+<h2><span class="feature-badge">Feature 6</span> <code>total_sold</code></h2>
+<pre><code class="language-python">sold_cols = ['1room_sold','2room_sold','3room_sold','4room_sold',
+             '5room_sold','exec_sold','multigen_sold','studio_apartment_sold']
+
+df['total_sold'] = df[sold_cols].sum(axis=1)</code></pre>
+<h3>What is it?</h3>
+<p>The dataset has 8 separate columns counting how many units of each flat type were sold in the block. We collapse all 8 into a single <code>total_sold</code> — the total number of units sold in that block.</p>
+<h3>Why?</h3>
+<ul>
+<li>Reduces 8 correlated columns to 1 (less noise)</li>
+<li>Gives a direct signal for block popularity / turnover rate</li>
+<li><code>axis=1</code> means sum across columns (row by row), not down each column</li>
+</ul>
+<hr />
+
+<h2><span class="feature-badge">Feature 7</span> <code>rental_ratio</code></h2>
+<pre><code class="language-python">rental_cols = ['1room_rental','2room_rental','3room_rental','4room_rental']
+df['total_rental'] = df[rental_cols].sum(axis=1)
+
+df['rental_ratio'] = df['total_rental'] / (df['total_units'] + 1)</code></pre>
+<h3>What is it?</h3>
+<p>The proportion of units in the block that are being rented out (rather than owner-occupied).</p>
+<pre><code>total_rental = 20 units rented out
+total_units  = 100 units in block
+rental_ratio = 20 / 101 = 0.198  (about 20% of units are rental)</code></pre>
+<h3>Why <code>+ 1</code>?</h3>
+<p>This is called <strong>Laplace smoothing</strong> — it prevents division by zero when <code>total_units = 0</code>.</p>
+<h3>Why does rental ratio matter?</h3>
+<p>A block with high rental ratio suggests investors are buying to rent out — often a sign of good location or school catchment. It is a proxy for block-level desirability.</p>
+<hr />
+
+<h2><span class="feature-badge">Feature 8</span> <code>floor_area_per_room</code></h2>
+<pre><code class="language-python">room_map = {'1 ROOM': 1, '2 ROOM': 2, '3 ROOM': 3, '4 ROOM': 4,
+            '5 ROOM': 5, 'EXECUTIVE': 5, 'MULTI-GENERATION': 6}
+df['room_count'] = df['flat_type'].map(room_map).fillna(3)
+
+df['floor_area_per_room'] = df['floor_area_sqm'] / (df['room_count'] + 1)</code></pre>
+<h3>What is it?</h3>
+<p>Spaciousness per room. Two flats can both be "4-room" but one might be 85 sqm and another 110 sqm.</p>
+<pre><code>Flat A: 4 ROOM, 85 sqm  → 85 / (4+1) = 17.0 sqm per room  (compact)
+Flat B: 4 ROOM, 110 sqm → 110 / (4+1) = 22.0 sqm per room (spacious)</code></pre>
+<p>A more spacious flat generally commands a premium. This feature captures that directly.</p>
+<hr />
+
+<h2><span class="feature-badge">Feature 9</span> <code>town_median_price</code> (Target Encoding)</h2>
+<pre><code class="language-python">if is_train:
+    town_price_map = df.groupby('town')['resale_price'].median().to_dict()
+    df['town_median_price'] = df['town'].map(town_price_map)
+else:
+    df['town_median_price'] = df['town'].map(town_price_map)</code></pre>
+<h3>What is target encoding?</h3>
+<p>Instead of encoding <code>town</code> as a number (Bishan=1, Bedok=2...), we replace each town name with the <strong>median resale price of that town</strong>.</p>
+<pre><code>town = 'BISHAN'     → town_median_price = $550,000
+town = 'QUEENSTOWN' → town_median_price = $620,000
+town = 'WOODLANDS'  → town_median_price = $380,000</code></pre>
+<h3>Why is this powerful?</h3>
+<p>The model now directly sees "this flat is in a $620K median town" rather than just seeing the number 3 for Queenstown.</p>
+<div class="warning">
+<p><strong>⚠ Data Leakage Warning</strong><br>
+If we compute the median from the full training set (including the row being predicted), we are technically "cheating" — the actual price affects its own prediction. The correct way is per-fold target encoding (compute median from the other 4 folds only). This is a known improvement for future notebooks.</p>
+</div>
+<h3>Why <code>is_train=True/False</code>?</h3>
+<ul>
+<li>Training: compute the map from training prices (<code>is_train=True</code>)</li>
+<li>Test: apply the <strong>same map</strong> computed from training — never compute a new map from test data (no prices in test!)</li>
+</ul>
+<pre><code class="language-python">X_fe, town_map = engineer_features(train, is_train=True)
+X_test_fe, _   = engineer_features(test, is_train=False, town_price_map=town_map)</code></pre>
+<hr />
+
+<h2><span class="feature-badge">Feature 10</span> <code>amenity_score</code></h2>
+<pre><code class="language-python">df['amenity_score'] = (
+    (1 / (df['mrt_nearest_distance'] + 1)) +
+    (1 / (df['mall_nearest_distance'] + 1)) +
+    (1 / (df['hawker_nearest_distance'] + 1))
+)</code></pre>
+<h3>What is it?</h3>
+<p>A composite convenience score combining three distance columns into one.</p>
+<h3>Why inverse distance?</h3>
+<p>Closer = better, so we take <code>1 / distance</code>:</p>
+<pre><code>MRT 200m away: 1/(200+1) = 0.00499   (very close, high score)
+MRT 2km away:  1/(2001)  = 0.00050   (far, low score)</code></pre>
+<p>Higher <code>amenity_score</code> = better access to MRT + mall + hawker centre combined. The <code>+ 1</code> prevents division by zero if any distance = 0.</p>
+<p>Why a composite instead of 3 separate features? Reduces dimensionality — instead of three correlated distances, we get one score capturing overall "urban convenience".</p>
+<hr />
+
+<h2>The Full Pipeline: Before vs After</h2>
+<pre><code>Before engineer_features():
+  - 68 raw features
+  - town as text label
+  - month as number 1-12
+  - lat/lon as raw GPS
+  - floor area and room count separate
+
+After engineer_features():
+  + remaining_lease     (lease years left — more interpretable than age)
+  + dist_to_cbd         (km from Raffles Place — #2 feature in XGBoost)
+  + is_mature_estate    (1=mature, 0=non-mature — 10-20% premium signal)
+  + tranc_month_sin     (cyclical month — fixes Dec/Jan gap)
+  + tranc_month_cos     (cyclical month complement)
+  + total_sold          (block turnover — 8 cols collapsed to 1)
+  + total_rental        (rental units count)
+  + rental_ratio        (rental proportion — desirability proxy)
+  + floor_area_per_room (spaciousness per room)
+  + town_median_price   (target encoding — direct price signal per town)
+  + amenity_score       (composite MRT + mall + hawker convenience)</code></pre>
+<hr />
+
+<h2>Results: Why Did v2 Score Worse Than Baseline?</h2>
+<table>
+<thead>
+<tr><th>Version</th><th>Model</th><th>Kaggle RMSE</th></tr>
+</thead>
+<tbody>
+<tr><td>v1</td><td>RF Baseline (raw features)</td><td>25,943.38</td></tr>
+<tr><td><strong>v2</strong></td><td><strong>RF + Feature Engineering</strong></td><td><strong>27,582.06 ← worse!</strong></td></tr>
+</tbody>
+</table>
+<h3>Why?</h3>
+<p>Random Forest already captures implicit relationships from raw features:</p>
+<ul>
+<li>It uses <code>latitude</code> + <code>longitude</code> together and discovers CBD proximity implicitly</li>
+<li>It uses <code>Tranc_Month</code> and handles the 12→1 gap reasonably through tree splits</li>
+<li>Target encoding via <code>town_median_price</code> introduces slight leakage that can hurt generalisation</li>
+</ul>
+<p><strong>Feature engineering benefits gradient boosting (XGBoost/LightGBM) far more than Random Forest.</strong></p>
+<p>This is why we carry the features forward into v3 XGBoost (notebook 04), which scored <strong>22,800.92</strong> — a major improvement over the $25,943 baseline.</p>
+<hr />
+
+<h2>Summary</h2>
+<pre><code>Feature engineering is not always about adding more columns.
+It's about making information more explicit for the model to use.
+
+Raw GPS coords   → explicit dist_to_cbd
+Raw month number → cyclical sin/cos encoding
+Raw flat_type    → derived floor_area_per_room
+Raw town text    → town_median_price (target encoding)
+8 sold columns   → total_sold
+4 rental columns → rental_ratio + rental_count</code></pre>
+<p>The payoff comes in notebook 04 where gradient boosting models fully leverage these features.</p>
+<p>→ <code>04_model_tuning.ipynb</code></p>
+</body>
+</html>

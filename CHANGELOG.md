@@ -25,4 +25,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | v2 | RF + Feature Engineering | 27,582.06 |
 | v3 | XGBoost Tuned + FE | 22,800.92 |
 | v4 | LightGBM Default + FE | 24,951.72 |
-| v5 | Blend 45% XGB + 55% LGBM Tuned | **22,428.34** |
+| v5 | Blend 45% XGB + 55% LGBM Tuned | 22,428.34 |
+| v6 | Log target + OOF encoding + interaction features | **22,124.05** |

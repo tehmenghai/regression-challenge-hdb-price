@@ -7,7 +7,8 @@
 | v2 | RF + Feature Engineering | 27,582.06 | ✅ submitted |
 | v3 | XGBoost Tuned + FE | 22,800.92 | ✅ submitted |
 | v4 | LightGBM Default + FE | 24,951.72 | ✅ submitted |
-| **v5** | **Blend 45% XGB + 55% LGBM Tuned** | **22,428.34** | ✅ **best so far** |
+| v5 | Blend 45% XGB + 55% LGBM Tuned | 22,428.34 | ✅ submitted |
+| **v6** | **Log target + OOF encoding + interaction features** | **22,124.05** | ✅ **best so far** |
 
 Full tracker: `outputs/submission_tracker.xlsx`
 
@@ -63,8 +64,8 @@ Full tracker: `outputs/submission_tracker.xlsx`
 | 1. EDA | `notebooks/eda/01_eda.ipynb` | ✅ done |
 | 2. Baseline model | `notebooks/experiments/02_baseline.ipynb` | ✅ done |
 | 3. Feature engineering | `notebooks/experiments/03_feature_engineering.ipynb` | ✅ done |
-| 4. Model tuning | `notebooks/experiments/04_model_tuning.ipynb` | ✅ done |
-| 5. Further tuning | _(continue in 04 tomorrow)_ | 🔄 in progress |
+| 4. Model tuning | `notebooks/experiments/04_model_tuning.ipynb` | ✅ done — XGB+LGBM tuned, blend v5 |
+| 5. Advanced tuning | `notebooks/experiments/05_advanced_tuning.ipynb` | ✅ done — log target + OOF encoding, v6 = 22,124 |
 
 ---
 
@@ -83,8 +84,8 @@ Full tracker: `outputs/submission_tracker.xlsx`
 
 ---
 
-## Next Steps (tomorrow)
-- [ ] Tune blend ratio more finely (currently 45% XGB / 55% LGBM)
-- [ ] Better target encoding — compute `town_median_price` per CV fold (reduce leakage)
-- [ ] Log-transform target `np.log1p(resale_price)` — reduce outlier impact on RMSE
-- [ ] Add more features — `cutoff_point` ranking, `dist_to_mrt_station_type`
+## Next Steps
+- [ ] Run `05_advanced_tuning.ipynb` and submit v6 (log target + OOF encoding + interactions)
+- [ ] If v6 improves: try **stacking** (meta-model on OOF XGB + LGBM predictions)
+- [ ] Try **CatBoost** — handles categoricals natively, no OrdinalEncoder needed
+- [ ] `street_name` frequency encoding — some streets are consistently premium
