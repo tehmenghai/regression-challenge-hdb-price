@@ -8,7 +8,8 @@
 | v3 | XGBoost Tuned + FE | 22,800.92 | ✅ submitted |
 | v4 | LightGBM Default + FE | 24,951.72 | ✅ submitted |
 | v5 | Blend 45% XGB + 55% LGBM Tuned | 22,428.34 | ✅ submitted |
-| **v6** | **Log target + OOF encoding + interaction features** | **22,124.05** | ✅ **best so far** |
+| v6 | Log target + OOF encoding + interaction features | 22,124.05 | ✅ submitted |
+| **v7** | **Stacking + street_freq (Ridge meta on XGB+LGBM OOF)** | **21,905.74** | ✅ **best so far** |
 
 Full tracker: `outputs/submission_tracker.xlsx`
 
@@ -66,6 +67,7 @@ Full tracker: `outputs/submission_tracker.xlsx`
 | 3. Feature engineering | `notebooks/experiments/03_feature_engineering.ipynb` | ✅ done |
 | 4. Model tuning | `notebooks/experiments/04_model_tuning.ipynb` | ✅ done — XGB+LGBM tuned, blend v5 |
 | 5. Advanced tuning | `notebooks/experiments/05_advanced_tuning.ipynb` | ✅ done — log target + OOF encoding, v6 = 22,124 |
+| 6. Stacking | `notebooks/experiments/06_stacking.ipynb` | ✅ done — stacking + street_freq, v7 = 21,905 |
 
 ---
 
@@ -85,7 +87,6 @@ Full tracker: `outputs/submission_tracker.xlsx`
 ---
 
 ## Next Steps
-- [ ] Run `05_advanced_tuning.ipynb` and submit v6 (log target + OOF encoding + interactions)
-- [ ] If v6 improves: try **stacking** (meta-model on OOF XGB + LGBM predictions)
-- [ ] Try **CatBoost** — handles categoricals natively, no OrdinalEncoder needed
-- [ ] `street_name` frequency encoding — some streets are consistently premium
+- [ ] Add **CatBoost** as third base model → stack on [XGB, LGBM, CAT] OOF
+- [ ] Try **Optuna** hyperparameter tuning — Bayesian search, smarter than RandomizedSearchCV
+- [ ] Add `block_num` encoding — some block numbers carry premiums
