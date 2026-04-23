@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HDB Model Training Journey</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #fafafa; color: #1a1a1a; line-height: 1.7;
+    padding: 40px 20px 80px; max-width: 960px; margin: 0 auto;
+  }
+  h1 { font-size: 2rem; border-bottom: 3px solid #0369a1; padding-bottom: 10px; margin-bottom: 6px; }
+  h2 { font-size: 1.35rem; color: #0369a1; border-left: 4px solid #0369a1; padding-left: 12px; margin: 44px 0 16px; }
+  h3 { font-size: 1rem; color: #1e40af; margin: 20px 0 8px; }
+  p  { margin-bottom: 12px; }
+  ul, ol { margin: 8px 0 12px 22px; }
+  li { margin-bottom: 4px; }
+  code { background: #1e293b; color: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.87em; }
+  pre  { background: #1e293b; color: #e2e8f0; padding: 16px 20px; border-radius: 8px; font-size: 0.87em; overflow-x: auto; margin: 12px 0; }
+  pre code { background: none; padding: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.91em; margin: 14px 0; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-radius: 6px; overflow: hidden; }
+  th { background: #0369a1; color: #fff; font-weight: 600; text-align: left; padding: 9px 13px; }
+  td { padding: 8px 13px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  tr:last-child td { border-bottom: none; }
+  blockquote { background: #eff6ff; border-left: 4px solid #0369a1; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; color: #1e40af; font-style: italic; }
+  .highlight { background: #ecfdf5; border-left: 4px solid #059669; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; }
+  .warning   { background: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; }
+  .note      { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; }
+  .divider { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+  .subtitle { color: #6b7280; font-size: 0.95rem; margin: 4px 0 20px; }
+  /* Score card */
+  .score-box { background: #fff; border: 2px solid #0369a1; border-radius: 10px; padding: 20px 26px; margin: 20px 0; display: flex; flex-wrap: wrap; gap: 28px; justify-content: space-around; }
+  .score-item { text-align: center; }
+  .score-num   { font-size: 1.55rem; font-weight: 700; color: #0369a1; }
+  .score-label { font-size: 0.81em; color: #6b7280; }
+  .score-delta { font-size: 0.88rem; color: #059669; font-weight: 600; }
+  /* Badges */
+  .badge { display: inline-block; font-size: 0.8em; padding: 2px 9px; border-radius: 12px; font-weight: 700; margin: 0 2px; }
+  .b-blue   { background: #0369a1; color: #fff; }
+  .b-green  { background: #059669; color: #fff; }
+  .b-red    { background: #dc2626; color: #fff; }
+  .b-gold   { background: #d97706; color: #fff; }
+  .b-gray   { background: #6b7280; color: #fff; }
+  /* Timeline */
+  .timeline { display: flex; align-items: center; gap: 0; margin: 24px 0; overflow-x: auto; padding-bottom: 8px; }
+  .tl-node  { display: flex; flex-direction: column; align-items: center; min-width: 80px; }
+  .tl-dot   { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.82em; color: #fff; z-index: 1; }
+  .tl-dot.best    { background: #d97706; }
+  .tl-dot.better  { background: #059669; }
+  .tl-dot.worse   { background: #dc2626; }
+  .tl-dot.neutral { background: #6b7280; }
+  .tl-label { font-size: 0.72em; color: #6b7280; margin-top: 4px; text-align: center; }
+  .tl-score { font-size: 0.7em; font-weight: 600; color: #1a1a1a; }
+  .tl-line  { flex: 1; height: 3px; background: #e5e7eb; min-width: 20px; }
+  /* Version cards */
+  .version-card {
+    border: 1px solid #e5e7eb; border-radius: 10px;
+    background: #fff; margin: 20px 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .card-border-green { border-top: 5px solid #059669; }
+  .card-border-red   { border-top: 5px solid #dc2626; }
+  .card-border-gold  { border-top: 5px solid #d97706; }
+  .card-border-gray  { border-top: 5px solid #9ca3af; }
+  .card-header { padding: 16px 22px 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; border-bottom: 1px solid #f1f5f9; }
+  .card-version { font-size: 1.4rem; font-weight: 800; color: #0369a1; min-width: 44px; }
+  .card-title   { font-size: 1.05rem; font-weight: 600; color: #1a1a1a; flex: 1; }
+  .card-meta    { font-size: 0.82em; color: #6b7280; }
+  .card-body    { padding: 14px 22px 18px; }
+  .card-scores  { display: flex; flex-wrap: wrap; gap: 20px; margin: 14px 0; background: #f8fafc; padding: 12px 16px; border-radius: 8px; }
+  .cs-item      { text-align: center; min-width: 80px; }
+  .cs-num       { font-size: 1.1rem; font-weight: 700; color: #0369a1; }
+  .cs-label     { font-size: 0.75em; color: #6b7280; }
+  .cs-delta-better { font-size: 0.82rem; color: #059669; font-weight: 600; }
+  .cs-delta-worse  { font-size: 0.82rem; color: #dc2626; font-weight: 600; }
+  .card-learning { background: #eff6ff; border-left: 3px solid #0369a1; padding: 10px 14px; border-radius: 0 6px 6px 0; margin-top: 12px; font-size: 0.93em; }
+  /* Two col */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+  /* Template box */
+  .template-box { background: #f1f5f9; border: 2px dashed #94a3b8; border-radius: 8px; padding: 18px 22px; margin: 16px 0; }
+  /* TOC */
+  .toc { background: #f1f5f9; border-radius: 8px; padding: 16px 22px; margin: 20px 0; }
+  .toc ol { margin-left: 18px; }
+  .toc li { margin-bottom: 3px; font-size: 0.93em; }
+  @media (max-width: 640px) {
+    .score-box { flex-direction: column; }
+    .two-col   { grid-template-columns: 1fr; }
+    .card-scores { flex-direction: column; }
+    .card-header { flex-direction: column; }
+  }
+</style>
+<script src="nav.js"></script>
+</head>
+<body>
+
+<h1>HDB Resale Price — Model Training Journey</h1>
+<p class="subtitle">Live document &mdash; update after every Kaggle submission &bull; Last updated: 2026-04-23</p>
+
+<!-- Current Best -->
+<div class="score-box">
+  <div class="score-item">
+    <div class="score-num">$21,804.67</div>
+    <div class="score-label">Best Kaggle Public RMSE (v8)</div>
+    <div class="score-delta">🏆 current best</div>
+  </div>
+  <div class="score-item">
+    <div class="score-num">$338</div>
+    <div class="score-label">Gap to 1st place ($21,466)</div>
+    <div class="score-delta">1st = Team with lowest RMSE</div>
+  </div>
+  <div class="score-item">
+    <div class="score-num">–$4,138</div>
+    <div class="score-label">Total improvement from v1</div>
+    <div class="score-delta">–16.0% from $25,943</div>
+  </div>
+  <div class="score-item">
+    <div class="score-num">8</div>
+    <div class="score-label">Submissions made</div>
+    <div class="score-delta">v1 through v8</div>
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <strong>Contents</strong>
+  <ol>
+    <li>Timeline</li>
+    <li>Quick Reference Table</li>
+    <li>CV vs Kaggle Gap Trend</li>
+    <li>Version Detail Cards (v1–v8)</li>
+    <li>Cumulative Feature Engineering</li>
+    <li>What's Next</li>
+  </ol>
+</div>
+
+<hr class="divider">
+
+<!-- SECTION 1: TIMELINE -->
+<h2>1. Timeline</h2>
+
+<div class="timeline">
+  <div class="tl-node">
+    <div class="tl-dot neutral">v1</div>
+    <div class="tl-label">RF<br>Baseline</div>
+    <div class="tl-score">$25,943</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot worse">v2</div>
+    <div class="tl-label">RF+FE</div>
+    <div class="tl-score">$27,582</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot better">v3</div>
+    <div class="tl-label">XGB</div>
+    <div class="tl-score">$22,801</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot worse">v4</div>
+    <div class="tl-label">LGBM<br>default</div>
+    <div class="tl-score">$24,952</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot better">v5</div>
+    <div class="tl-label">Blend</div>
+    <div class="tl-score">$22,428</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot better">v6</div>
+    <div class="tl-label">Log+OOF</div>
+    <div class="tl-score">$22,124</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot better">v7</div>
+    <div class="tl-label">Stack<br>2-model</div>
+    <div class="tl-score">$21,906</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot best">v8</div>
+    <div class="tl-label">Stack<br>3-model</div>
+    <div class="tl-score">$21,805</div>
+  </div>
+</div>
+<p style="font-size:0.82em;color:#6b7280;">
+  <span class="badge b-green">green</span> = improved &nbsp;
+  <span class="badge b-red">red</span> = worse &nbsp;
+  <span class="badge b-gold">gold</span> = current best
+</p>
+
+<hr class="divider">
+
+<!-- SECTION 2: QUICK REFERENCE -->
+<h2>2. Quick Reference Table</h2>
+
+<table>
+  <tr>
+    <th>Version</th><th>Model</th><th>Notebook</th>
+    <th>CV/OOF RMSE</th><th>Kaggle RMSE</th><th>Gap</th><th>Δ vs prev</th><th>Status</th>
+  </tr>
+  <tr>
+    <td><span class="badge b-gray">v1</span></td>
+    <td>RF Baseline</td><td><code>02_baseline</code></td>
+    <td>$25,871</td><td>$25,943</td><td>$72</td><td>—</td>
+    <td><span class="badge b-blue">submitted</span></td>
+  </tr>
+  <tr>
+    <td><span class="badge b-red">v2</span></td>
+    <td>RF + Feature Engineering</td><td><code>03_feature_eng</code></td>
+    <td>$26,564</td><td>$27,582</td><td>$1,018</td><td style="color:#dc2626;font-weight:600;">+$1,639 ↑</td>
+    <td><span class="badge b-red">worse</span></td>
+  </tr>
+  <tr>
+    <td><span class="badge b-green">v3</span></td>
+    <td>XGBoost Tuned + FE</td><td><code>04_model_tuning</code></td>
+    <td>$22,748</td><td>$22,801</td><td>$53</td><td style="color:#059669;font-weight:600;">–$4,781 ↓</td>
+    <td><span class="badge b-blue">submitted</span></td>
+  </tr>
+  <tr>
+    <td><span class="badge b-red">v4</span></td>
+    <td>LightGBM Default + FE</td><td><code>04_model_tuning</code></td>
+    <td>$24,348</td><td>$24,952</td><td>$604</td><td style="color:#dc2626;font-weight:600;">+$2,151 ↑</td>
+    <td><span class="badge b-red">worse</span></td>
+  </tr>
+  <tr>
+    <td><span class="badge b-green">v5</span></td>
+    <td>Blend 45% XGB + 55% LGBM</td><td><code>04_model_tuning</code></td>
+    <td>$21,570</td><td>$22,428</td><td>$858</td><td style="color:#059669;font-weight:600;">–$524 ↓</td>
+    <td><span class="badge b-blue">submitted</span></td>
+  </tr>
+  <tr>
+    <td><span class="badge b-green">v6</span></td>
+    <td>Log target + OOF encoding</td><td><code>05_advanced_tuning</code></td>
+    <td>$21,818</td><td>$22,124</td><td>$306</td><td style="color:#059669;font-weight:600;">–$304 ↓</td>
+    <td><span class="badge b-blue">submitted</span></td>
+  </tr>
+  <tr>
+    <td><span class="badge b-green">v7</span></td>
+    <td>Stack XGB+LGBM (Ridge)</td><td><code>06_stacking</code></td>
+    <td>$21,841</td><td>$21,906</td><td>$65</td><td style="color:#059669;font-weight:600;">–$218 ↓</td>
+    <td><span class="badge b-blue">submitted</span></td>
+  </tr>
+  <tr style="background:#fffbeb;">
+    <td><span class="badge b-gold">v8</span></td>
+    <td><strong>Stack XGB+LGBM+ET (Ridge)</strong></td><td><code>07_et_stack</code></td>
+    <td><strong>$21,708</strong></td><td><strong>$21,805</strong></td><td>$97</td>
+    <td style="color:#059669;font-weight:600;">–$101 ↓</td>
+    <td><span class="badge b-gold">🏆 best</span></td>
+  </tr>
+</table>
+
+<hr class="divider">
+
+<!-- SECTION 3: GAP TREND -->
+<h2>3. CV vs Kaggle Gap Trend</h2>
+<p>The gap between CV/OOF RMSE and Kaggle RMSE measures how well the model generalises. A smaller gap = the CV score is a reliable predictor of Kaggle performance.</p>
+
+<table>
+  <tr><th>Version</th><th>CV/OOF RMSE</th><th>Kaggle RMSE</th><th>Gap</th><th>What drove the change</th></tr>
+  <tr><td>v5</td><td>$21,570</td><td>$22,428</td><td style="color:#dc2626;font-weight:700;">$858</td><td>Target leakage — <code>town_median_price</code> computed on full train</td></tr>
+  <tr><td>v6</td><td>$21,818</td><td>$22,124</td><td style="color:#d97706;font-weight:700;">$306</td><td>OOF encoding for <code>town_median_price</code> eliminated leakage</td></tr>
+  <tr><td>v7</td><td>$21,841</td><td>$21,906</td><td style="color:#059669;font-weight:700;">$65</td><td>OOF stacking + fold-averaged test predictions</td></tr>
+  <tr><td>v8</td><td>$21,708</td><td>$21,805</td><td style="color:#059669;font-weight:700;">$97</td><td>3-model stack; slight gap increase (expected with added model)</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>Rule of thumb:</strong> Gap &lt; $300 = well-calibrated. Gap &lt; $100 = excellent. Gaps above $500 usually signal target leakage or overfitting to training data.
+</div>
+
+<hr class="divider">
+
+<!-- SECTION 4: VERSION CARDS -->
+<h2>4. Version Detail Cards</h2>
+
+<!-- v1 -->
+<div class="version-card card-border-gray">
+  <div class="card-header">
+    <div class="card-version">v1</div>
+    <div class="card-title">Random Forest Baseline</div>
+    <div class="card-meta">2026-04-21 &bull; <code>02_baseline.ipynb</code> &bull; <span class="badge b-blue">submitted</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>Random Forest: <code>n_estimators=100, max_depth=15, min_samples_leaf=5</code></li>
+          <li>Raw features only — no engineering</li>
+          <li>5-fold cross-validation</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>Establish a reliable baseline. RF is robust out of the box and provides feature importance to guide future engineering.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$25,871</div><div class="cs-label">CV RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$25,943</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$72</div><div class="cs-label">Gap</div></div>
+      <div class="cs-item"><div class="cs-num">—</div><div class="cs-label">Δ vs prev</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> RF gives a solid $25,943 baseline. Small $72 gap confirms CV is well-calibrated even without special encoding.</div>
+  </div>
+</div>
+
+<!-- v2 -->
+<div class="version-card card-border-red">
+  <div class="card-header">
+    <div class="card-version">v2</div>
+    <div class="card-title">RF + Feature Engineering</div>
+    <div class="card-meta">2026-04-21 &bull; <code>03_feature_engineering.ipynb</code> &bull; <span class="badge b-red">worse</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>Added 9 features: <code>remaining_lease</code>, <code>dist_to_cbd</code>, <code>is_mature_estate</code>, cyclical month, <code>total_sold</code>, <code>rental_ratio</code>, <code>floor_area_per_room</code>, <code>town_median_price</code>, <code>amenity_score</code></li>
+          <li>Same RF hyperparameters as v1</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>Domain knowledge: distance to CBD, remaining lease, and estate maturity are known HDB price drivers.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$26,564</div><div class="cs-label">CV RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$27,582</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$1,018</div><div class="cs-label">Gap</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-worse">+$1,639 ↑</div><div class="cs-label">Δ vs prev</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> RF already captures lat/lon and age implicitly. Feature engineering didn't help RF — but these same features gave XGBoost a massive boost in v3.</div>
+  </div>
+</div>
+
+<!-- v3 -->
+<div class="version-card card-border-green">
+  <div class="card-header">
+    <div class="card-version">v3</div>
+    <div class="card-title">XGBoost Tuned + Feature Engineering</div>
+    <div class="card-meta">2026-04-21 &bull; <code>04_model_tuning.ipynb</code> &bull; <span class="badge b-blue">submitted</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>Switched from RF to XGBoost</li>
+          <li>RandomizedSearchCV: <code>n_est=1000, depth=7, lr=0.05, sub=0.7, col=0.6</code></li>
+          <li>Same 9 engineered features from v2</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>Gradient boosting (XGBoost) is designed to benefit from explicit feature engineering, unlike RF which creates implicit interactions.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$22,748</div><div class="cs-label">CV RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$22,801</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$53</div><div class="cs-label">Gap</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-better">–$4,781 ↓</div><div class="cs-label">Δ vs prev</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> Biggest single jump in the project (–$4,781). Gradient boosting + domain-engineered features is a powerful combination.</div>
+  </div>
+</div>
+
+<!-- v4 -->
+<div class="version-card card-border-red">
+  <div class="card-header">
+    <div class="card-version">v4</div>
+    <div class="card-title">LightGBM Default + Feature Engineering</div>
+    <div class="card-meta">2026-04-21 &bull; <code>04_model_tuning.ipynb</code> &bull; <span class="badge b-red">worse</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>Replaced XGBoost with LightGBM</li>
+          <li>Near-default params: <code>n_est=500, depth=6, leaves=40, lr=0.05</code></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>LightGBM is typically faster and more accurate than XGBoost — but only when properly tuned.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$24,348</div><div class="cs-label">CV RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$24,952</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$604</div><div class="cs-label">Gap</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-worse">+$2,151 ↑</div><div class="cs-label">Δ vs prev</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> Default <code>num_leaves=31</code> is too simple for 150K rows. Tuning is essential for LightGBM — it cannot beat XGBoost out of the box.</div>
+  </div>
+</div>
+
+<!-- v5 -->
+<div class="version-card card-border-green">
+  <div class="card-header">
+    <div class="card-version">v5</div>
+    <div class="card-title">Blend 45% XGB + 55% LGBM Tuned</div>
+    <div class="card-meta">2026-04-21 &bull; <code>04_model_tuning.ipynb</code> &bull; <span class="badge b-blue">submitted</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>Tuned LGBM: <code>n_est=1200, depth=8, leaves=80, lr=0.08</code></li>
+          <li>Fixed-ratio blend: 45% XGB + 55% LGBM</li>
+          <li>Blend ratio selected by grid search on validation set</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>Two tuned models with different structures should average out to better predictions than either alone.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$21,570</div><div class="cs-label">CV RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$22,428</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num" style="color:#dc2626;">$858</div><div class="cs-label">Gap (large!)</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-better">–$524 ↓</div><div class="cs-label">Δ vs prev</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> Blending works. But the $858 gap reveals target leakage — <code>town_median_price</code> was computed on all training data, making CV overly optimistic.</div>
+  </div>
+</div>
+
+<!-- v6 -->
+<div class="version-card card-border-green">
+  <div class="card-header">
+    <div class="card-version">v6</div>
+    <div class="card-title">Log Target + OOF Encoding + Interaction Features</div>
+    <div class="card-meta">2026-04-22 &bull; <code>05_advanced_tuning.ipynb</code> &bull; <span class="badge b-blue">submitted</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li><code>log1p(resale_price)</code> as training target</li>
+          <li>OOF <code>town_median_price</code> encoding (per-fold, prevents leakage)</li>
+          <li>3 interaction features: <code>dist_x_storey</code>, <code>lease_x_area</code>, <code>log_dist_to_cbd</code></li>
+          <li>Re-tuned XGB and LGBM with log target</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>Log transform reduces the disproportionate RMSE penalty on expensive flats. OOF encoding directly fixes the $858 gap from v5.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$21,818</div><div class="cs-label">CV RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$22,124</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num" style="color:#d97706;">$306</div><div class="cs-label">Gap (↓ from $858)</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-better">–$304 ↓</div><div class="cs-label">Δ vs prev</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> OOF encoding collapsed the gap $858→$306. The –$304 Kaggle improvement confirms leakage was the main driver in v5's inflated CV score.</div>
+  </div>
+</div>
+
+<!-- v7 -->
+<div class="version-card card-border-green">
+  <div class="card-header">
+    <div class="card-version">v7</div>
+    <div class="card-title">Stacking — Ridge Meta on XGB+LGBM OOF + street_freq</div>
+    <div class="card-meta">2026-04-22 &bull; <code>06_stacking.ipynb</code> &bull; <span class="badge b-blue">submitted</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>5-fold OOF predictions from XGB and LGBM</li>
+          <li>Ridge meta-model on <code>[xgb_oof, lgbm_oof]</code></li>
+          <li><code>street_freq</code> encoding: count of transactions per street</li>
+          <li>Re-tuned base models with RandomizedSearchCV</li>
+        </ul>
+        <p>Learned weights: <code>0.57×XGB + 0.43×LGBM – 0.012</code></p>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>Fixed blend applies the same ratio to every flat. Ridge can learn adaptive weights. <code>street_freq</code> captures street-level desirability without leaking target.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$21,841</div><div class="cs-label">OOF RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$21,906</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num" style="color:#059669;">$65</div><div class="cs-label">Gap (excellent)</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-better">–$218 ↓</div><div class="cs-label">Δ vs prev</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> Gap collapsed to $65 — excellent generalisation. Improvement came from better-tuned base models and street_freq. Ridge meta-model itself only beat fixed blend by $3 OOF.</div>
+  </div>
+</div>
+
+<!-- v8 -->
+<div class="version-card card-border-gold">
+  <div class="card-header">
+    <div class="card-version">v8</div>
+    <div class="card-title">3-Model Stack — Ridge Meta on XGB+LGBM+ET OOF</div>
+    <div class="card-meta">2026-04-23 &bull; <code>07_extra_trees_stack.ipynb</code> &bull; <span class="badge b-gold">🏆 current best</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>Added <code>ExtraTreesRegressor</code> as 3rd base model (in syllabus — bagging)</li>
+          <li>Ridge meta on <code>[xgb_oof, lgbm_oof, et_oof]</code> — 3 meta-features</li>
+          <li>Tuned ET: <code>n_est=700, max_feat=0.8, depth=None, min_split=10</code></li>
+        </ul>
+        <p>Learned: <code>0.45×XGB + 0.33×LGBM + 0.22×ET – 0.033</code></p>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>ET (bagging) makes fundamentally different errors than XGB/LGBM (boosting). Adding a structurally different model gives Ridge more signal to correct systematic boosting errors.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$21,708</div><div class="cs-label">OOF RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$21,805</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num" style="color:#059669;">$97</div><div class="cs-label">Gap</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-better">–$101 ↓</div><div class="cs-label">Δ vs prev</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> ET alone is $23,478 but contributes 22% weight in the stack. Bagging/boosting diversity is real and measurable — –$133 OOF and –$101 Kaggle improvement.</div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- SECTION 5: FEATURE ENGINEERING -->
+<h2>5. Cumulative Feature Engineering</h2>
+
+<table>
+  <tr><th>Feature</th><th>Added in</th><th>What it captures</th><th>In model?</th></tr>
+  <tr><td><code>remaining_lease</code></td><td>v2</td><td>99 – (year – lease_commence). More interpretable than age.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>dist_to_cbd</code></td><td>v2</td><td>Haversine km to Raffles Place. #2 feature importance in XGB.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>is_mature_estate</code></td><td>v2</td><td>Binary flag for 15 mature towns. 10–20% price premium.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>tranc_month_sin/cos</code></td><td>v2</td><td>Cyclical encoding — fixes Dec→Jan discontinuity.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>total_sold</code></td><td>v2</td><td>Sum of 8 xroom_sold columns — block activity signal.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>rental_ratio</code></td><td>v2</td><td>total_rental / total_dwelling_units — block desirability proxy.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>floor_area_per_room</code></td><td>v2</td><td>floor_area_sqm / num_rooms — spaciousness signal.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>town_median_price</code></td><td>v2 (leaky) → v6 (OOF)</td><td>Median resale price per town — direct location signal. Must use OOF encoding to prevent leakage.</td><td><span class="badge b-green">yes (OOF)</span></td></tr>
+  <tr><td><code>amenity_score</code></td><td>v2</td><td>Composite: normalised inverse of MRT + Mall + Hawker distances.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>dist_x_storey</code></td><td>v6</td><td>dist_to_cbd × mid_storey — high floors in CBD worth more.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>lease_x_area</code></td><td>v6</td><td>remaining_lease × floor_area_sqm — combined value signal.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>log_dist_to_cbd</code></td><td>v6</td><td>log1p(dist_to_cbd) — linearises the distance-price relationship.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>street_freq</code></td><td>v7</td><td>Count of transactions per street_name — premium street signal, no target leakage.</td><td><span class="badge b-green">yes</span></td></tr>
+</table>
+
+<hr class="divider">
+
+<!-- SECTION 6: WHAT'S NEXT -->
+<h2>6. What's Next</h2>
+<p>Current gap to 1st place: <strong>$338</strong> (1st = $21,466)</p>
+
+<table>
+  <tr><th>#</th><th>Experiment</th><th>Expected gain</th><th>Notes</th></tr>
+  <tr>
+    <td>1</td>
+    <td><strong>Optuna hyperparameter tuning</strong></td>
+    <td>–$50 to –$150</td>
+    <td>Bayesian optimisation. 100 Optuna trials ≈ 300 random trials. Works for all 3 base models.</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td><strong>block_num encoding</strong></td>
+    <td>–$30 to –$80</td>
+    <td>Extract numeric part of block number. Corner/heritage blocks may carry premiums.</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td><strong>More interaction features</strong></td>
+    <td>–$20 to –$60</td>
+    <td>e.g. <code>storey × mature_estate</code>, <code>floor_area × remaining_lease × town_median</code></td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td><strong>Lower learning rate + more trees</strong></td>
+    <td>–$20 to –$50</td>
+    <td>Current LR=0.05 with 1500 trees. Try LR=0.02 with 3000+ trees for more stable convergence.</td>
+  </tr>
+</table>
+
+<hr class="divider">
+
+<!-- ADD NEW VERSION TEMPLATE -->
+<!--
+==========================================================
+HOW TO ADD A NEW VERSION — copy this block, fill in values
+==========================================================
+
+<div class="version-card card-border-green">  ← change to card-border-red if worse, card-border-gold if new best
+  <div class="card-header">
+    <div class="card-version">vN</div>
+    <div class="card-title">[Model Description]</div>
+    <div class="card-meta">YYYY-MM-DD &bull; <code>NN_notebook.ipynb</code> &bull; <span class="badge b-blue">submitted</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>[change 1]</li>
+          <li>[change 2]</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>[1-2 sentences on motivation]</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$XX,XXX</div><div class="cs-label">OOF RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$XX,XXX</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$XXX</div><div class="cs-label">Gap</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-better">–$XXX ↓</div><div class="cs-label">Δ vs prev</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> [one sentence takeaway]</div>
+  </div>
+</div>
+
+After adding the card:
+1. Update Section 0 current best score card (top of page)
+2. Add a row to the Quick Reference Table (Section 2)
+3. Add gap to Section 3 if it changed significantly
+4. Update Section 6 (What's Next) to remove completed experiments
+5. Update submission_journey.md to match
+6. Commit and push both files
+==========================================================
+-->
+
+<p style="color:#6b7280; font-size:0.82em; text-align:center; margin-top: 40px;">
+  HDB Resale Price Regression &mdash; NTU SCTP Module 3.4 &bull; Live document, last updated 2026-04-23
+</p>
+
+</body>
+</html>

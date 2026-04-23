@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-23
+
+### Added
+- Layman's study guides for PCA exploration, all models, and submission journey (HTML + MD)
+- Navigation script (`nav.js`) wired into existing explained HTML pages for cross-page browsing
+
 ## [1.0.0] - 2026-04-21
 
 ### Added

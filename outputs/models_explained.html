@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Models Explained — XGBoost, LightGBM & Extra Trees</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #fafafa;
+    color: #1a1a1a;
+    line-height: 1.7;
+    padding: 40px 20px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 2rem; border-bottom: 3px solid #0369a1; padding-bottom: 10px; margin-bottom: 8px; }
+  h2 { font-size: 1.4rem; color: #0369a1; border-left: 4px solid #0369a1; padding-left: 12px; margin: 40px 0 16px; }
+  h3 { font-size: 1.1rem; color: #1e40af; margin: 24px 0 10px; }
+  h4 { font-size: 0.97rem; color: #374151; margin: 18px 0 8px; font-weight: 600; }
+  p { margin-bottom: 12px; }
+  ul, ol { margin: 8px 0 14px 22px; }
+  li { margin-bottom: 5px; }
+  code {
+    background: #1e293b; color: #e2e8f0;
+    padding: 2px 6px; border-radius: 4px; font-size: 0.88em;
+  }
+  pre {
+    background: #1e293b; color: #e2e8f0;
+    padding: 18px 20px; border-radius: 8px;
+    font-size: 0.88em; overflow-x: auto;
+    margin: 14px 0;
+  }
+  pre code { background: none; padding: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.93em; margin: 16px 0; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-radius: 6px; overflow: hidden; }
+  th { background: #0369a1; color: #fff; font-weight: 600; text-align: left; padding: 10px 14px; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  tr:last-child td { border-bottom: none; }
+  blockquote {
+    background: #eff6ff; border-left: 4px solid #0369a1;
+    padding: 14px 18px; border-radius: 0 6px 6px 0; margin: 16px 0;
+    color: #1e40af; font-style: italic;
+  }
+  .highlight {
+    background: #ecfdf5; border-left: 4px solid #059669;
+    padding: 14px 18px; border-radius: 0 6px 6px 0; margin: 16px 0;
+  }
+  .warning {
+    background: #fffbeb; border-left: 4px solid #d97706;
+    padding: 14px 18px; border-radius: 0 6px 6px 0; margin: 16px 0;
+  }
+  .score-box {
+    background: #fff; border: 2px solid #0369a1; border-radius: 10px;
+    padding: 22px 28px; margin: 20px 0;
+    display: flex; flex-wrap: wrap; gap: 30px; justify-content: space-around;
+  }
+  .score-item { text-align: center; }
+  .score-num { font-size: 1.6rem; font-weight: 700; color: #0369a1; }
+  .score-label { font-size: 0.82em; color: #6b7280; }
+  .score-delta { font-size: 0.9rem; color: #059669; font-weight: 600; }
+  .badge {
+    display: inline-block; background: #0369a1; color: #fff;
+    font-size: 0.82em; padding: 2px 10px; border-radius: 12px;
+    font-weight: 600; margin: 0 3px;
+  }
+  .badge-green { background: #059669; }
+  .badge-orange { background: #d97706; }
+  .badge-purple { background: #7c3aed; }
+  .model-card {
+    border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 18px 22px; margin: 16px 0;
+    background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .model-card h3 { margin-top: 0; }
+  .family-bagging { border-top: 4px solid #059669; }
+  .family-boosting { border-top: 4px solid #0369a1; }
+  .divider { border: none; border-top: 1px solid #e5e7eb; margin: 36px 0; }
+  .toc { background: #f1f5f9; border-radius: 8px; padding: 18px 24px; margin: 24px 0; }
+  .toc ol { margin-left: 18px; }
+  .toc li { margin-bottom: 4px; font-size: 0.95em; }
+  .subtitle { color: #6b7280; font-size: 1rem; margin-top: 4px; margin-bottom: 20px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 16px 0; }
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } .score-box { flex-direction: column; } }
+  .tree-diagram {
+    background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 20px; font-family: monospace; font-size: 0.9em; margin: 16px 0;
+    line-height: 2;
+  }
+</style>
+<script src="nav.js"></script>
+</head>
+<body>
+
+<h1>XGBoost, LightGBM &amp; Extra Trees</h1>
+<p class="subtitle">A Study Guide — From Decision Trees to 3-Model Stacking | Based on NTU SCTP 3.4 Supervised Learning Advanced</p>
+
+<!-- Score Card -->
+<div class="score-box">
+  <div class="score-item">
+    <div class="score-num">$21,805</div>
+    <div class="score-label">v8 Kaggle RMSE</div>
+    <div class="score-delta">↓ $101 vs v7</div>
+  </div>
+  <div class="score-item">
+    <div class="score-num">$21,708</div>
+    <div class="score-label">OOF RMSE (3-model stack)</div>
+    <div class="score-delta">↓ $133 vs 2-model</div>
+  </div>
+  <div class="score-item">
+    <div class="score-num">45% · 33% · 22%</div>
+    <div class="score-label">Ridge weights: XGB · LGBM · ET</div>
+    <div class="score-delta">ET adds bagging diversity</div>
+  </div>
+</div>
+
+<!-- Table of Contents -->
+<div class="toc">
+  <strong>Contents</strong>
+  <ol>
+    <li>Foundation: Decision Trees</li>
+    <li>Two Ensemble Families: Bagging vs Boosting</li>
+    <li>Extra Trees — the Bagging model</li>
+    <li>XGBoost — Gradient Boosting + Regularisation</li>
+    <li>LightGBM — Fast Gradient Boosting</li>
+    <li>Side-by-Side Comparison</li>
+    <li>How We Tuned: RandomizedSearchCV</li>
+    <li>Why 3 Models Beat 2</li>
+    <li>Key Hyperparameters Explained</li>
+    <li>Glossary</li>
+  </ol>
+</div>
+
+<hr class="divider">
+
+<!-- PART 1 -->
+<h2>Part 1 — Foundation: Decision Trees</h2>
+<p>All three models (XGBoost, LightGBM, Extra Trees) are built on decision trees. Understanding a single tree is the key to understanding everything else.</p>
+
+<h3>What is a Decision Tree?</h3>
+<p>A decision tree is a flowchart-like structure. It asks a series of yes/no questions about the data, and each answer leads to a prediction.</p>
+
+<div class="tree-diagram">
+Root Node: floor_area_sqm &gt; 90?
+├── Yes → Decision Node: dist_to_cbd &lt; 5km?
+│         ├── Yes → Leaf: predict $650,000
+│         └── No  → Leaf: predict $480,000
+└── No  → Decision Node: remaining_lease &gt; 70?
+          ├── Yes → Leaf: predict $420,000
+          └── No  → Leaf: predict $320,000
+</div>
+
+<table>
+  <tr><th>Node type</th><th>What it does</th><th>HDB example</th></tr>
+  <tr><td><strong>Root Node</strong></td><td>The first split — most important feature goes here</td><td><code>floor_area_sqm &gt; 90</code></td></tr>
+  <tr><td><strong>Decision Node</strong></td><td>Has 2+ branches — tests a feature</td><td><code>dist_to_cbd &lt; 5km</code></td></tr>
+  <tr><td><strong>Leaf Node</strong></td><td>Final answer — no more splits</td><td><code>predict $480,000</code></td></tr>
+</table>
+
+<h3>How Does the Tree Decide Where to Split? (CART)</h3>
+<p>Sklearn uses <strong>CART</strong> (Classification and Regression Trees). It evaluates every possible split point on every feature and picks the one that reduces impurity the most.</p>
+
+<div class="two-col">
+  <div class="model-card">
+    <h4>Gini Impurity</h4>
+    <p>Measures how often a randomly chosen element would be incorrectly labelled. <strong>Low Gini = pure node</strong> (all same class). Used by default in sklearn Decision Trees.</p>
+    <blockquote>Like a bag of marbles — if all marbles are the same colour (pure), Gini = 0. If half are red and half blue, Gini = 0.5 (maximum disorder).</blockquote>
+  </div>
+  <div class="model-card">
+    <h4>Entropy &amp; Information Gain</h4>
+    <p>Entropy measures randomness/disorder in a node. <strong>Information Gain</strong> = how much entropy drops after a split. The split with the highest information gain is chosen.</p>
+    <blockquote>Like asking: "After I split here, am I more certain about the answer?" The split that gives the most certainty wins.</blockquote>
+  </div>
+</div>
+
+<h3>The Problem: A Single Tree Overfits</h3>
+<p>A single decision tree, if grown deep enough, will memorise the training data — it fits every quirk and noise in the dataset. On new data, it performs poorly.</p>
+<div class="warning">
+  <strong>Pros of Decision Trees:</strong> Simple, interpretable, handles both numerical and categorical data, requires little preprocessing.<br>
+  <strong>Cons:</strong> Prone to overfitting with many features. Unstable — small data changes can produce a completely different tree.
+</div>
+<blockquote>Analogy: One doctor diagnoses you based on their personal experience. Sometimes brilliant, sometimes wrong. A panel of doctors with different specialities is more reliable — that's ensemble learning.</blockquote>
+
+<hr class="divider">
+
+<!-- PART 2 -->
+<h2>Part 2 — Two Ensemble Families: Bagging vs Boosting</h2>
+<p>Ensemble learning combines many weak models into one strong model. The syllabus covers two main approaches: <strong>Bagging</strong> and <strong>Boosting</strong>. Our three models each belong to one of these families.</p>
+
+<table>
+  <tr><th></th><th>Bagging</th><th>Boosting</th></tr>
+  <tr><td><strong>Full name</strong></td><td>Bootstrap Aggregating</td><td>Sequential Error Correction</td></tr>
+  <tr><td><strong>How trees are built</strong></td><td>In parallel — each tree is independent</td><td>In sequence — each tree fixes the previous tree's errors</td></tr>
+  <tr><td><strong>Data sampling</strong></td><td>Each tree trains on a random bootstrap sample (with replacement)</td><td>Each tree trains on residuals/errors of the prior model</td></tr>
+  <tr><td><strong>Final prediction</strong></td><td>Average (regression) or vote (classification)</td><td>Weighted sum of all trees</td></tr>
+  <tr><td><strong>Main benefit</strong></td><td>Reduces variance — prevents overfitting</td><td>Reduces bias — corrects systematic errors</td></tr>
+  <tr><td><strong>Our models</strong></td><td><span class="badge badge-green">Extra Trees</span></td><td><span class="badge">XGBoost</span> <span class="badge">LightGBM</span></td></tr>
+</table>
+
+<div class="two-col">
+  <div class="model-card family-bagging">
+    <h3>Bagging <span class="badge badge-green">ET</span></h3>
+    <ol>
+      <li>Sample N subsets from training data (with replacement)</li>
+      <li>Train one independent tree on each subset</li>
+      <li>Average all predictions</li>
+    </ol>
+    <p><em>Each tree sees different data → diverse errors → averaging cancels them out.</em></p>
+  </div>
+  <div class="model-card family-boosting">
+    <h3>Boosting <span class="badge">XGB</span> <span class="badge">LGBM</span></h3>
+    <ol>
+      <li>Train Tree 1 on original data</li>
+      <li>Calculate Tree 1's errors (residuals)</li>
+      <li>Train Tree 2 to predict those errors</li>
+      <li>Add Tree 2 to Tree 1. Repeat 1,500 times.</li>
+    </ol>
+    <p><em>Each tree is a small correction to everything before it.</em></p>
+  </div>
+</div>
+
+<blockquote>Analogy from class: Think of an orchestra (ensemble). Bagging = all musicians play simultaneously and we average the sound. Boosting = musicians take turns, each one listening to what the previous played and adding what was missing.</blockquote>
+
+<h3>Where does Random Forest fit?</h3>
+<p>Random Forest (covered in the syllabus) is the direct predecessor of Extra Trees. Both are bagging methods. Random Forest = bagging + random feature subsampling per tree. Extra Trees goes one step further — it also randomises the split thresholds.</p>
+
+<hr class="divider">
+
+<!-- PART 3 -->
+<h2>Part 3 — Extra Trees <span class="badge badge-green">Bagging Family</span></h2>
+
+<div class="model-card family-bagging">
+  <h3>What makes Extra Trees "Extra"?</h3>
+  <p>Full name: <strong>Extremely Randomised Trees</strong>. It adds an extra layer of randomness on top of Random Forest.</p>
+  <table>
+    <tr><th></th><th>Random Forest</th><th>Extra Trees</th></tr>
+    <tr><td>Data sampling</td><td>Bootstrap (with replacement)</td><td>Whole training set (no sampling)</td></tr>
+    <tr><td>Feature selection per split</td><td>Random subset of features</td><td>Random subset of features</td></tr>
+    <tr><td>Split threshold</td><td><strong>Searches for best threshold</strong></td><td><strong>Picks a random threshold</strong></td></tr>
+    <tr><td>Speed</td><td>Medium</td><td>Fast (no threshold search)</td></tr>
+    <tr><td>Variance</td><td>Low</td><td>Lower (more randomness)</td></tr>
+  </table>
+</div>
+
+<h3>Why random thresholds?</h3>
+<p>Random Forest: "For feature <code>dist_to_cbd</code>, I'll try 0.5km, 1km, 2km, 5km… I'll pick 2km because that split reduces error the most."</p>
+<p>Extra Trees: "For feature <code>dist_to_cbd</code>, I'll randomly pick 3.7km. Done."</p>
+
+<div class="highlight">
+  <strong>Key insight:</strong> The randomness makes ET trees more diverse from each other. When you average 700 diverse trees, the random errors cancel out. The result is a model with very low variance — it doesn't overfit easily.
+</div>
+
+<h3>Our HDB Extra Trees Model (v8)</h3>
+<pre><code>ExtraTreesRegressor(
+    n_estimators    = 700,    # 700 independent trees
+    max_features    = 0.8,    # Each split considers 80% of features randomly
+    max_depth       = None,   # Trees grown until pure leaves (no depth cap)
+    min_samples_split = 10,   # Node needs at least 10 samples to split further
+    min_samples_leaf  = 1,
+    random_state    = 42,
+    n_jobs          = -1      # Use all CPU cores
+)</code></pre>
+
+<table>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Individual OOF RMSE</td><td>$23,478 (weaker than XGB/LGBM alone)</td></tr>
+  <tr><td>Ridge weight in v8 stack</td><td>22% (coef = 0.2164)</td></tr>
+  <tr><td>Training time (OOF × 5 folds)</td><td>~5 min per fold</td></tr>
+</table>
+
+<div class="warning">
+  <strong>Why is ET's individual RMSE higher ($23,478 vs XGB's $21,987)?</strong><br>
+  Random split thresholds are less precise than optimised ones. ET sacrifices some accuracy per tree in exchange for diversity. This trade-off is worth it when stacking — the diversity it adds helps Ridge correct errors the boosting models share.
+</div>
+
+<hr class="divider">
+
+<!-- PART 4 -->
+<h2>Part 4 — XGBoost <span class="badge">Gradient Boosting Family</span></h2>
+
+<div class="model-card family-boosting">
+  <h3>Gradient Boosting — the Core Idea</h3>
+  <p>The syllabus describes gradient boosting as: <em>"a variant of boosting that uses gradient descent to minimise errors in sequential models. It builds one tree at a time, where each new tree helps to correct errors made by previously trained trees."</em></p>
+
+  <div class="tree-diagram">
+Round 1: Train Tree_1 → predicts $400K, actual $480K → residual = +$80K
+Round 2: Train Tree_2 on residuals → predicts +$60K
+Round 3: Train Tree_3 on new residuals → predicts +$15K
+...
+Round 1500: Final prediction = sum of all 1500 small corrections</div>
+</div>
+
+<h3>What XGBoost adds on top of plain Gradient Boosting</h3>
+<table>
+  <tr><th>Feature</th><th>What it does</th></tr>
+  <tr><td><strong>L1 regularisation</strong> (<code>reg_alpha</code>)</td><td>Penalises the absolute values of leaf weights → can zero out useless features</td></tr>
+  <tr><td><strong>L2 regularisation</strong> (<code>reg_lambda</code>)</td><td>Penalises squared leaf weights → shrinks all weights, prevents any one feature from dominating</td></tr>
+  <tr><td><strong>Tree pruning</strong></td><td>Grows trees then prunes back branches that don't improve the score</td></tr>
+  <tr><td><strong>Missing value handling</strong></td><td>Learns which branch to send missing values down automatically</td></tr>
+  <tr><td><strong>Column subsampling</strong> (<code>colsample_bytree</code>)</td><td>Each tree only sees a random fraction of features → reduces correlation between trees</td></tr>
+</table>
+
+<h3>Our HDB XGBoost Model (v7/v8)</h3>
+<pre><code>XGBRegressor(
+    n_estimators      = 1500,   # 1500 sequential trees
+    max_depth         = 7,      # Each tree can be at most 7 levels deep
+    learning_rate     = 0.05,   # Each tree contributes 5% of its prediction
+    subsample         = 0.9,    # Each tree trains on 90% of rows (randomly)
+    colsample_bytree  = 0.6,    # Each tree sees 60% of features
+    min_child_weight  = 1,
+    reg_alpha         = 0.01,   # Small L1 penalty
+    reg_lambda        = 2,      # L2 penalty
+    tree_method       = 'hist', # Fast histogram-based algorithm
+    random_state      = 42,
+    n_jobs            = -1
+)</code></pre>
+
+<table>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Individual OOF RMSE</td><td>$21,987 (best single model)</td></tr>
+  <tr><td>Ridge weight in v8 stack</td><td>45% (coef = 0.4522)</td></tr>
+  <tr><td>Val RMSE after tuning</td><td>$21,769</td></tr>
+</table>
+
+<blockquote>Analogy: XGBoost is like a very diligent student who reviews every exam mistake carefully and focuses on weak areas next time. After 1,500 rounds of correction, it's highly accurate — but it can sometimes over-study (overfit) without the regularisation penalty keeping it honest.</blockquote>
+
+<hr class="divider">
+
+<!-- PART 5 -->
+<h2>Part 5 — LightGBM <span class="badge">Gradient Boosting Family</span></h2>
+
+<div class="model-card family-boosting">
+  <h3>What is LightGBM?</h3>
+  <p>From the syllabus: <em>"LightGBM (Light Gradient Boosting Machine) is a gradient boosting framework developed by <strong>Microsoft</strong> that uses tree-based learning algorithms and is designed for distributed and efficient training, particularly on large datasets."</em></p>
+  <p><em>"Currently one of the best Supervised Learning algorithms in terms of performance and speed for tabular (structural or dataframe-like) datasets."</em></p>
+</div>
+
+<h3>LightGBM's Key Innovation: Leaf-wise Growth</h3>
+<p>XGBoost and most gradient boosting methods use <strong>level-wise</strong> tree growth. LightGBM uses <strong>leaf-wise</strong> growth. This is the most important difference to understand.</p>
+
+<div class="two-col">
+  <div class="model-card">
+    <h4>Level-wise (XGBoost default)</h4>
+    <p>Split <em>all</em> leaves at each depth level:</p>
+    <div class="tree-diagram" style="font-size:0.82em">
+Depth 1: split 1 node  →  2 nodes
+Depth 2: split 2 nodes →  4 nodes
+Depth 3: split 4 nodes →  8 nodes
+(balanced tree)</div>
+    <p>Predictable structure, less risk of overfitting.</p>
+  </div>
+  <div class="model-card">
+    <h4>Leaf-wise (LightGBM)</h4>
+    <p>Always split the <em>single leaf with the highest loss gain</em>:</p>
+    <div class="tree-diagram" style="font-size:0.82em">
+Step 1: split best leaf → 2 nodes
+Step 2: split best leaf → 3 nodes
+Step 3: split best leaf → 4 nodes
+(asymmetric, deep where needed)</div>
+    <p>Faster convergence, better accuracy per tree — but needs <code>num_leaves</code> to control depth.</p>
+  </div>
+</div>
+
+<div class="highlight">
+  <strong>Why this matters:</strong> Leaf-wise growth means LightGBM can fit complex patterns more efficiently. It gets better accuracy with fewer trees — hence "Light" (faster). The key control parameter is <code>num_leaves</code>, not <code>max_depth</code> alone.
+</div>
+
+<h3>LightGBM Pros &amp; Cons (from syllabus)</h3>
+<div class="two-col">
+  <div class="model-card">
+    <h4>Advantages</h4>
+    <ul>
+      <li>Faster training and higher efficiency</li>
+      <li>Lower memory usage</li>
+      <li>Better accuracy with parallel and GPU learning</li>
+      <li>Capable of handling large-scale data</li>
+    </ul>
+  </div>
+  <div class="model-card">
+    <h4>Disadvantages</h4>
+    <ul>
+      <li>May overfit on small datasets</li>
+      <li>Requires careful hyperparameter tuning (especially <code>num_leaves</code>)</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Our HDB LightGBM Model (v7/v8)</h3>
+<pre><code>LGBMRegressor(
+    n_estimators      = 1500,  # 1500 sequential trees
+    max_depth         = 10,    # Maximum tree depth
+    num_leaves        = 80,    # Max leaves per tree (key LGBM param, must be < 2^max_depth)
+    learning_rate     = 0.05,  # Each tree contributes 5%
+    subsample         = 0.8,   # Each tree trains on 80% of rows
+    colsample_bytree  = 0.8,   # Each tree sees 80% of features
+    min_child_samples = 10,    # Leaf needs at least 10 samples
+    reg_alpha         = 0.1,   # L1 regularisation
+    reg_lambda        = 0.1,   # L2 regularisation
+    random_state      = 42,
+    n_jobs            = -1,
+    verbosity         = -1     # Suppress output
+)</code></pre>
+
+<table>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Individual OOF RMSE</td><td>$22,119</td></tr>
+  <tr><td>Ridge weight in v8 stack</td><td>33% (coef = 0.3340)</td></tr>
+  <tr><td>Val RMSE after tuning</td><td>$21,808</td></tr>
+</table>
+
+<hr class="divider">
+
+<!-- PART 6 -->
+<h2>Part 6 — Side-by-Side Comparison</h2>
+
+<table>
+  <tr>
+    <th>Attribute</th>
+    <th>Extra Trees <span class="badge badge-green">Bagging</span></th>
+    <th>XGBoost <span class="badge">Boosting</span></th>
+    <th>LightGBM <span class="badge">Boosting</span></th>
+  </tr>
+  <tr><td><strong>Family</strong></td><td>Bagging</td><td>Boosting</td><td>Boosting</td></tr>
+  <tr><td><strong>Tree building</strong></td><td>Parallel (independent)</td><td>Sequential</td><td>Sequential</td></tr>
+  <tr><td><strong>Split selection</strong></td><td>Random threshold</td><td>Best threshold (level-wise)</td><td>Best threshold (leaf-wise)</td></tr>
+  <tr><td><strong>Regularisation</strong></td><td>Via randomness</td><td>L1 + L2 explicit</td><td>L1 + L2 explicit</td></tr>
+  <tr><td><strong>Speed</strong></td><td>Fast (no search)</td><td>Medium</td><td>Fast</td></tr>
+  <tr><td><strong>Memory</strong></td><td>High (many full trees)</td><td>Medium</td><td>Low</td></tr>
+  <tr><td><strong>Key depth param</strong></td><td><code>max_depth=None</code></td><td><code>max_depth=7</code></td><td><code>num_leaves=80</code></td></tr>
+  <tr><td><strong>Overfitting risk</strong></td><td>Low (random splits)</td><td>Medium (needs reg)</td><td>Medium (needs tuning)</td></tr>
+  <tr><td><strong>v8 OOF RMSE</strong></td><td>$23,478</td><td>$21,987</td><td>$22,119</td></tr>
+  <tr><td><strong>Ridge weight (v8)</strong></td><td>22%</td><td>45%</td><td>33%</td></tr>
+  <tr><td><strong>Syllabus section</strong></td><td>Bagging / Ensemble Methods recap</td><td>Gradient Boosting Method</td><td>Dedicated LightGBM section</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>Why all three together?</strong> XGB and LGBM are both sequential boosters — they tend to make <em>similar</em> errors on the same difficult rows. ET is a parallel bagger making <em>different</em> errors. When Ridge combines all three, it gets a more rounded picture of each flat's true price.
+</div>
+
+<hr class="divider">
+
+<!-- PART 7 -->
+<h2>Part 7 — How We Tuned: RandomizedSearchCV</h2>
+<p>The syllabus covers both Grid Search and Random Search. We used <strong>RandomizedSearchCV</strong> because our parameter spaces are large (thousands of combinations).</p>
+
+<table>
+  <tr><th></th><th>Grid Search</th><th>Random Search (our choice)</th></tr>
+  <tr><td><strong>What it tries</strong></td><td>Every possible combination</td><td>Random sample of combinations</td></tr>
+  <tr><td><strong>Speed</strong></td><td>Slow (exponential with params)</td><td>Fast (fixed n_iter trials)</td></tr>
+  <tr><td><strong>Coverage</strong></td><td>Exhaustive — guaranteed to find best in grid</td><td>Probabilistic — likely to find near-best</td></tr>
+  <tr><td><strong>When to use</strong></td><td>Small search space (&lt; 100 combos)</td><td>Large search space, time-limited</td></tr>
+</table>
+
+<h3>The Model Training Workflow (from syllabus)</h3>
+<table>
+  <tr><th>Step</th><th>What we did</th></tr>
+  <tr><td><strong>Step 1</strong> — Train-test split</td><td>80/20 split: 120,507 train rows, 30,126 val rows</td></tr>
+  <tr><td><strong>Step 2</strong> — Grid/Random search + CV</td><td>30 trials × 3-fold CV for XGB and LGBM; 20 trials for ET</td></tr>
+  <tr><td><strong>Step 3</strong> — Retrain on full data</td><td>Best params used in 5-fold OOF generation on all 150,633 rows</td></tr>
+  <tr><td><strong>Step 4</strong> — Evaluate on test</td><td>Final predictions averaged across 5 folds → Kaggle submission</td></tr>
+</table>
+
+<h3>Search Spaces &amp; Results</h3>
+<pre><code># XGBoost — 30 trials × 3-fold = 90 fits
+param_dist_xgb = {
+    'n_estimators'    : [800, 1000, 1200, 1500],
+    'max_depth'       : [5, 6, 7, 8],
+    'learning_rate'   : [0.01, 0.03, 0.05, 0.08],
+    'subsample'       : [0.6, 0.7, 0.8, 0.9],
+    'colsample_bytree': [0.5, 0.6, 0.7, 0.8],
+    'reg_alpha'       : [0, 0.01, 0.1],
+    'reg_lambda'      : [1, 1.5, 2],
+}
+# Best: n_est=1500, depth=7, lr=0.05, sub=0.9, col=0.6, alpha=0.01, lambda=2
+# Val RMSE: $21,769
+
+# LightGBM — 30 trials × 3-fold = 90 fits
+param_dist_lgbm = {
+    'n_estimators'     : [800, 1000, 1200, 1500],
+    'max_depth'        : [6, 7, 8, 10],
+    'num_leaves'       : [60, 80, 100, 127],
+    'learning_rate'    : [0.01, 0.03, 0.05, 0.08],
+    'subsample'        : [0.7, 0.8, 0.9],
+    'colsample_bytree' : [0.6, 0.7, 0.8],
+    'min_child_samples': [10, 20, 30],
+}
+# Best: n_est=1500, depth=10, leaves=80, lr=0.05, sub=0.8, col=0.8
+# Val RMSE: $21,808
+
+# Extra Trees — 20 trials × 3-fold = 60 fits
+param_dist_et = {
+    'n_estimators'     : [300, 500, 700, 1000],
+    'max_depth'        : [None, 20, 30, 40],
+    'min_samples_split': [2, 5, 10],
+    'min_samples_leaf' : [1, 2, 4],
+    'max_features'     : [0.5, 0.6, 0.7, 0.8],
+}
+# Best: n_est=700, depth=None, min_split=10, max_feat=0.8
+# Val RMSE: $23,123</code></pre>
+
+<div class="highlight">
+  <strong>Custom scorer:</strong> We evaluated in <em>dollar RMSE</em>, not log-space RMSE. This means the search directly optimised what Kaggle measures.<br>
+  <code>dollar_rmse_scorer = make_scorer(lambda y_true, y_pred: -√MSE(expm1(y_true), expm1(y_pred)))</code>
+</div>
+
+<hr class="divider">
+
+<!-- PART 8 -->
+<h2>Part 8 — Why 3 Models Beat 2 (The Diversity Argument)</h2>
+
+<h3>The Numbers</h3>
+<table>
+  <tr><th>Configuration</th><th>OOF RMSE</th><th>Improvement</th></tr>
+  <tr><td>XGBoost alone</td><td>$21,987</td><td>—</td></tr>
+  <tr><td>LightGBM alone</td><td>$22,119</td><td>—</td></tr>
+  <tr><td>Extra Trees alone</td><td>$23,478</td><td>—</td></tr>
+  <tr><td>2-model stack (v7, XGB+LGBM)</td><td>$21,841</td><td>baseline</td></tr>
+  <tr><td><strong>3-model stack (v8, +ET)</strong></td><td><strong>$21,708</strong></td><td><strong>–$133</strong></td></tr>
+</table>
+
+<h3>Ridge Coefficients — What Did the Meta-Model Learn?</h3>
+<pre><code>final_prediction = 0.4522 × xgb_oof
+                 + 0.3340 × lgbm_oof
+                 + 0.2164 × et_oof
+                 – 0.0333  (intercept)
+
+# Coefficients are stable across all alpha values (0.001 to 10.0)
+# ET coefficient 0.22 — clearly positive, meaningful contribution</code></pre>
+
+<div class="highlight">
+  <strong>ET's coefficient (0.22) is well above zero.</strong> Even though ET is the weakest individual model ($23,478), Ridge still uses it significantly. Why? Because ET makes <em>different errors</em> from XGB and LGBM. When both boosting models are wrong about the same flat, ET's independent (random) structure is sometimes right — and Ridge exploits that.
+</div>
+
+<h3>Why Do Bagging and Boosting Models Make Different Errors?</h3>
+<table>
+  <tr><th></th><th>XGBoost &amp; LightGBM</th><th>Extra Trees</th></tr>
+  <tr><td><strong>Error type</strong></td><td>Correlated — both struggle with same unusual flats (e.g. very large executive flats in non-mature estates)</td><td>Random — errors are scattered, uncorrelated with boosting errors</td></tr>
+  <tr><td><strong>When combined</strong></td><td>Shared errors survive averaging</td><td>Random errors cancel out; occasional "lucky" correct predictions add value</td></tr>
+</table>
+
+<blockquote>Analogy: Three specialists reviewing an HDB valuation. Surgeon (XGB) and GP (LGBM) both went to the same medical school — they tend to miss the same rare conditions. Nutritionist (ET) has a completely different training background — when both doctors are wrong about an unusual case, the nutritionist's different angle catches it.</blockquote>
+
+<hr class="divider">
+
+<!-- PART 9 -->
+<h2>Part 9 — Key Hyperparameters Explained</h2>
+
+<h3>XGBoost</h3>
+<table>
+  <tr><th>Parameter</th><th>What it controls</th><th>Our v8 value</th><th>Higher → </th><th>Lower → </th></tr>
+  <tr><td><code>n_estimators</code></td><td>Number of sequential trees</td><td>1500</td><td>More correction rounds, slower, risk overfit</td><td>Underfits, faster</td></tr>
+  <tr><td><code>max_depth</code></td><td>Maximum depth of each tree</td><td>7</td><td>More complex, overfits</td><td>Simpler, underfits</td></tr>
+  <tr><td><code>learning_rate</code></td><td>How much each tree contributes</td><td>0.05</td><td>Learns fast, less stable</td><td>Needs more trees, more stable</td></tr>
+  <tr><td><code>subsample</code></td><td>Fraction of rows per tree</td><td>0.9</td><td>More data per tree, less diversity</td><td>More diversity, risk underfit</td></tr>
+  <tr><td><code>colsample_bytree</code></td><td>Fraction of features per tree</td><td>0.6</td><td>More features, slower</td><td>More diversity, risk missing key features</td></tr>
+  <tr><td><code>reg_lambda</code></td><td>L2 regularisation strength</td><td>2</td><td>Stronger penalty, simpler model</td><td>Less regularisation, risk overfit</td></tr>
+</table>
+
+<h3>LightGBM</h3>
+<table>
+  <tr><th>Parameter</th><th>What it controls</th><th>Our v8 value</th><th>Higher → </th><th>Lower → </th></tr>
+  <tr><td><code>n_estimators</code></td><td>Number of trees</td><td>1500</td><td>More rounds, slower</td><td>Underfits</td></tr>
+  <tr><td><code>num_leaves</code></td><td>Max leaves per tree (key LGBM param)</td><td>80</td><td>More complex tree, risk overfit</td><td>Simpler, faster</td></tr>
+  <tr><td><code>max_depth</code></td><td>Hard depth cap</td><td>10</td><td>Allows deeper trees</td><td>Limits tree size</td></tr>
+  <tr><td><code>learning_rate</code></td><td>Step size per tree</td><td>0.05</td><td>Faster, less stable</td><td>Slower, more robust</td></tr>
+  <tr><td><code>min_child_samples</code></td><td>Min samples per leaf</td><td>10</td><td>Larger leaves, less overfit</td><td>Smaller leaves, more overfit</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>LGBM rule of thumb:</strong> <code>num_leaves</code> should be less than <code>2^max_depth</code>. Our values: <code>num_leaves=80 &lt; 2^10=1024</code>. The real control is <code>num_leaves</code> — it's more intuitive than depth for leaf-wise trees.
+</div>
+
+<h3>Extra Trees</h3>
+<table>
+  <tr><th>Parameter</th><th>What it controls</th><th>Our v8 value</th><th>Higher → </th><th>Lower → </th></tr>
+  <tr><td><code>n_estimators</code></td><td>Number of parallel trees</td><td>700</td><td>More stable, diminishing returns above 500</td><td>Noisier predictions</td></tr>
+  <tr><td><code>max_features</code></td><td>Fraction of features per split</td><td>0.8</td><td>Less randomness, more like RF</td><td>More randomness, more diversity</td></tr>
+  <tr><td><code>max_depth</code></td><td>Tree depth cap</td><td>None (unlimited)</td><td>Fully grown trees, high variance</td><td>Shallow, underfit</td></tr>
+  <tr><td><code>min_samples_split</code></td><td>Min samples to split a node</td><td>10</td><td>Larger nodes, less overfit</td><td>Splits on tiny groups, overfit</td></tr>
+</table>
+
+<hr class="divider">
+
+<!-- PART 10 -->
+<h2>Part 10 — Glossary</h2>
+
+<table>
+  <tr><th>Term</th><th>Simple Definition</th></tr>
+  <tr><td><strong>Gini Impurity</strong></td><td>How often a randomly chosen element would be incorrectly labelled. 0 = perfectly pure node. Used to choose splits.</td></tr>
+  <tr><td><strong>Entropy</strong></td><td>Measure of disorder in a node. High entropy = mixed labels. Low entropy = mostly one class.</td></tr>
+  <tr><td><strong>Information Gain</strong></td><td>How much entropy decreases after a split. We pick the split with the highest information gain.</td></tr>
+  <tr><td><strong>Bootstrapping</strong></td><td>Sampling with replacement — draw N rows from N-row dataset, some rows appear twice, some not at all. Used in Random Forest and Bagging.</td></tr>
+  <tr><td><strong>OOF Prediction</strong></td><td>Out-of-Fold — predicting a row using a model that was trained without that row. Prevents target leakage.</td></tr>
+  <tr><td><strong>Residuals</strong></td><td>The errors from one model — what the next boosting tree tries to predict.</td></tr>
+  <tr><td><strong>Leaf-wise growth</strong></td><td>LightGBM's approach — always split the single leaf with the highest gain. Creates asymmetric, efficient trees.</td></tr>
+  <tr><td><strong>Level-wise growth</strong></td><td>Traditional approach — split all leaves at each depth. More balanced, less efficient.</td></tr>
+  <tr><td><strong>L1 regularisation (Lasso)</strong></td><td>Penalty on absolute values of weights. Can shrink weights to zero — effectively removing features.</td></tr>
+  <tr><td><strong>L2 regularisation (Ridge)</strong></td><td>Penalty on squared values of weights. Shrinks all weights towards zero but rarely to exactly zero.</td></tr>
+  <tr><td><strong>subsample</strong></td><td>Fraction of training rows used per tree. Adds randomness, reduces overfitting.</td></tr>
+  <tr><td><strong>colsample_bytree</strong></td><td>Fraction of features randomly selected per tree. Reduces correlation between trees.</td></tr>
+  <tr><td><strong>num_leaves</strong></td><td>LightGBM's main complexity control. More leaves = more complex model. Use instead of max_depth for LGBM.</td></tr>
+  <tr><td><strong>CV–Kaggle gap</strong></td><td>Difference between cross-validation RMSE and Kaggle public RMSE. Small gap = model generalises well.</td></tr>
+  <tr><td><strong>Ridge meta-model</strong></td><td>In stacking: a simple linear model that learns the optimal weights to combine base model predictions.</td></tr>
+</table>
+
+<hr class="divider">
+
+<h2>Full Journey — v1 to v8</h2>
+<table>
+  <tr><th>Version</th><th>Model</th><th>Kaggle RMSE</th><th>Key lesson</th></tr>
+  <tr><td>v1</td><td>Random Forest Baseline</td><td>$25,943</td><td>Good starting point</td></tr>
+  <tr><td>v2</td><td>RF + Feature Engineering</td><td>$27,582</td><td>RF already captures these implicitly</td></tr>
+  <tr><td>v3</td><td>XGBoost + Feature Engineering</td><td>$22,801</td><td>Gradient boosting benefits from FE</td></tr>
+  <tr><td>v4</td><td>LightGBM (default params)</td><td>$24,952</td><td>LGBM needs tuning to beat XGB</td></tr>
+  <tr><td>v5</td><td>Blend 45% XGB + 55% LGBM</td><td>$22,428</td><td>Combining models reduces variance</td></tr>
+  <tr><td>v6</td><td>Log target + OOF encoding</td><td>$22,124</td><td>Log transform helps expensive flats</td></tr>
+  <tr><td>v7</td><td>Stack XGB + LGBM (Ridge meta)</td><td>$21,906</td><td>OOF stacking = better generalisation</td></tr>
+  <tr><td><strong>v8</strong></td><td><strong>Stack XGB + LGBM + ET</strong></td><td><strong>$21,805</strong></td><td><strong>Bagging diversity adds value even when ET is weaker alone</strong></td></tr>
+</table>
+<p><strong>Total improvement: –$4,138 RMSE (–16.0%) from v1 to v8</strong></p>
+
+<br>
+<p style="color:#6b7280; font-size:0.85em; text-align:center;">
+  HDB Resale Price Regression — NTU SCTP Module 3.4 Supervised Learning Advanced | v8 best score: $21,804.67
+</p>
+
+</body>
+</html>
