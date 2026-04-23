@@ -27,4 +27,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | v4 | LightGBM Default + FE | 24,951.72 |
 | v5 | Blend 45% XGB + 55% LGBM Tuned | 22,428.34 |
 | v6 | Log target + OOF encoding + interaction features | 22,124.05 |
-| v7 | Stacking + street_freq (Ridge meta on XGB+LGBM OOF) | **21,905.74** |
+| v7 | Stacking + street_freq (Ridge meta on XGB+LGBM OOF) | 21,905.74 |
+| v8 | 3-model stack (Ridge meta on XGB+LGBM+ET OOF) | **21,804.67** |

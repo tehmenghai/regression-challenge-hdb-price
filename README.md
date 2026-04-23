@@ -9,7 +9,8 @@
 | v4 | LightGBM Default + FE | 24,951.72 | ✅ submitted |
 | v5 | Blend 45% XGB + 55% LGBM Tuned | 22,428.34 | ✅ submitted |
 | v6 | Log target + OOF encoding + interaction features | 22,124.05 | ✅ submitted |
-| **v7** | **Stacking + street_freq (Ridge meta on XGB+LGBM OOF)** | **21,905.74** | ✅ **best so far** |
+| v7 | Stacking + street_freq (Ridge meta on XGB+LGBM OOF) | 21,905.74 | ✅ submitted |
+| **v8** | **3-model stack (XGB + LGBM + Extra Trees OOF)** | **21,804.67** | ✅ **best so far** |
 
 Full tracker: `outputs/submission_tracker.xlsx`
 
@@ -68,6 +69,7 @@ Full tracker: `outputs/submission_tracker.xlsx`
 | 4. Model tuning | `notebooks/experiments/04_model_tuning.ipynb` | ✅ done — XGB+LGBM tuned, blend v5 |
 | 5. Advanced tuning | `notebooks/experiments/05_advanced_tuning.ipynb` | ✅ done — log target + OOF encoding, v6 = 22,124 |
 | 6. Stacking | `notebooks/experiments/06_stacking.ipynb` | ✅ done — stacking + street_freq, v7 = 21,905 |
+| 7. Extra Trees stack | `notebooks/experiments/07_extra_trees_stack.ipynb` | ✅ done — 3-model stack, v8 = 21,805 |
 
 ---
 
@@ -87,6 +89,6 @@ Full tracker: `outputs/submission_tracker.xlsx`
 ---
 
 ## Next Steps
-- [ ] Add **CatBoost** as third base model → stack on [XGB, LGBM, CAT] OOF
 - [ ] Try **Optuna** hyperparameter tuning — Bayesian search, smarter than RandomizedSearchCV
 - [ ] Add `block_num` encoding — some block numbers carry premiums
+- [ ] More feature engineering — storey band interactions, age × estate maturity

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>v7 Stacking — Full Explanation</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 24px 80px; color: #1a1a1a; line-height: 1.7; background: #fafafa; }
+  h1 { font-size: 2rem; color: #1a1a1a; border-bottom: 3px solid #0369a1; padding-bottom: 12px; }
+  h2 { font-size: 1.4rem; color: #0369a1; margin-top: 48px; border-left: 4px solid #0369a1; padding-left: 12px; }
+  h3 { font-size: 1.1rem; color: #374151; margin-top: 28px; }
+  h4 { font-size: 1rem; color: #6b7280; margin-top: 20px; }
+  code { background: #1e293b; color: #e2e8f0; padding: 2px 7px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.88em; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 8px; overflow-x: auto; font-size: 0.88em; line-height: 1.6; margin: 16px 0; }
+  pre code { background: none; padding: 0; color: inherit; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.93em; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  th { background: #0369a1; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  blockquote { background: #eff6ff; border-left: 4px solid #0369a1; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #1e3a5f; }
+  blockquote p { margin: 0; }
+  .highlight { background: #ecfdf5; border-left: 4px solid #059669; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #065f46; }
+  .highlight p { margin: 0; }
+  .warning { background: #fffbeb; border-left: 4px solid #f59e0b; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #78350f; }
+  .warning p { margin: 0; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 6px 0; }
+  .badge { display: inline-block; background: #0369a1; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; margin-right: 6px; vertical-align: middle; font-family: 'Courier New', monospace; }
+  .badge-green { background: #059669; }
+  .badge-orange { background: #d97706; }
+  .score-box { background: white; border: 2px solid #0369a1; border-radius: 12px; padding: 20px 28px; margin: 24px 0; display: flex; gap: 40px; flex-wrap: wrap; }
+  .score-item { text-align: center; }
+  .score-label { font-size: 0.82em; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .score-value { font-size: 1.6rem; font-weight: 700; color: #0369a1; }
+  .score-delta { font-size: 0.88em; color: #059669; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>v7 — Stacking &amp; Street Frequency Encoding<br><small style="font-size:0.55em;color:#6b7280;">A Layman's Guide to How We Got Our Best Score</small></h1>
+
+<div class="score-box">
+  <div class="score-item">
+    <div class="score-label">v7 Kaggle RMSE</div>
+    <div class="score-value">$21,906</div>
+    <div class="score-delta">↓ $218 vs v6</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">v6 Kaggle RMSE</div>
+    <div class="score-value" style="color:#6b7280">$22,124</div>
+    <div class="score-delta" style="color:#6b7280">previous best</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">CV–Kaggle Gap</div>
+    <div class="score-value" style="color:#059669">$64</div>
+    <div class="score-delta">↓ from $306 (v6)</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Training data used</div>
+    <div class="score-value" style="color:#374151">100%</div>
+    <div class="score-delta">150,633 rows</div>
+  </div>
+</div>
+
+<hr />
+
+<h2>What Changed in v7?</h2>
+
+<table>
+<thead><tr><th>#</th><th>Improvement</th><th>What it does</th><th>Kaggle gain</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>Stacking</strong></td><td>Ridge meta-model learns the best blend of XGB + LGBM predictions instead of using a fixed ratio</td><td>Most of –$218</td></tr>
+<tr><td>2</td><td><strong>street_freq encoding</strong></td><td>Converts 500+ unique street names into a single "how popular is this street" number</td><td>Contributed signal</td></tr>
+<tr><td>3</td><td><strong>Re-tuned base models</strong></td><td>RandomizedSearchCV found better hyperparameters than our v6 guesses</td><td>Contributed signal</td></tr>
+</tbody>
+</table>
+
+<hr />
+
+<h2>Part 1 — street_name Frequency Encoding</h2>
+
+<h3>The problem: 500+ street names confuse the model</h3>
+<p>Our dataset has over 500 unique street names: <em>Ang Mo Kio Ave 3</em>, <em>Buona Vista Rd</em>, <em>Holland Rd</em>, <em>Jurong West St 42</em>...</p>
+<p>Tree-based models like XGBoost can handle categories, but 500 levels is a lot of noise. Some streets appear only 5 times — the model can barely learn anything from them.</p>
+
+<h3>The fix: count how often each street appears</h3>
+<p>Instead of passing the raw street name, we replace it with <strong>how many transactions happened on that street in the training data</strong>.</p>
+
+<pre><code>street_name          → street_freq
+--------------------------------------
+ANG MO KIO AVE 3     → 3,842   (very popular street, many transactions)
+HOLLAND RD           → 412     (premium area, moderate volume)
+BUONA VISTA RD       → 89      (smaller estate)
+COMPASSVALE BOW      → 12      (newer, fewer transactions)
+</code></pre>
+
+<blockquote>
+<p><strong>Analogy:</strong> Imagine you're trying to predict restaurant bill size. Instead of knowing the restaurant's full name, you know "this restaurant has served 5,000 customers" vs "this one has served 20." A busy restaurant is likely in a premium location with higher bills. Same logic applies to HDB streets — high-frequency streets tend to be in well-established estates with more consistent pricing.</p>
+</blockquote>
+
+<h3>Why is this safe? (No data leakage)</h3>
+<p>Some features can "cheat" by using information that includes price data (called <strong>data leakage</strong>). <code>street_freq</code> is safe because it only counts <em>how many transactions</em> happened — it never looks at the price. It's purely a volume signal.</p>
+
+<pre><code class="language-python"># Compute from training set only
+STREET_FREQ = train['street_name'].value_counts().to_dict()
+
+# Apply to both train and test
+df['street_freq'] = df['street_name'].map(STREET_FREQ).fillna(0)
+# fillna(0) = streets in test that never appeared in training get count = 0</code></pre>
+
+<hr />
+
+<h2>Part 2 — What is Stacking?</h2>
+
+<h3>The problem with blending (v5, v6)</h3>
+<p>In v5 and v6, we combined XGBoost and LightGBM predictions using a <strong>fixed ratio</strong>:</p>
+<pre><code>v6 blend: 57% × XGB prediction + 43% × LGBM prediction = final prediction</code></pre>
+
+<p>This fixed ratio applies the same weight to every single flat — whether it's a 3-room flat in Jurong, a 5-room flat in Bishan, or an Executive flat in Queenstown. But what if XGBoost is better at predicting mature estate prices, and LightGBM is better at newer estates?</p>
+
+<blockquote>
+<p><strong>Analogy — Fixed blend is like a recipe that never changes:</strong><br>
+Imagine two chefs (XGBoost and LightGBM). Chef A is brilliant at cooking Asian food. Chef B excels at Western food. Fixed blending says: "Always serve 57% of Chef A's dish + 43% of Chef B's dish regardless of what the customer ordered." Stacking says: "When the customer orders Asian food, trust Chef A more. When they order Western, trust Chef B more."</p>
+</blockquote>
+
+<h3>Stacking — a smarter way to combine models</h3>
+<p>Stacking uses a third model (the <strong>meta-model</strong>) to learn the optimal combination. Here's the full 3-step process:</p>
+
+<h4>Step 1: Generate Out-of-Fold (OOF) predictions</h4>
+<p>We split training data into 5 folds. For each fold, we train XGB and LGBM on the other 4 folds and predict the held-out fold:</p>
+
+<pre><code>Fold 1 (20K rows):  Train on folds 2+3+4+5 → XGB predicts fold 1 → xgb_oof[fold1]
+Fold 2 (20K rows):  Train on folds 1+3+4+5 → XGB predicts fold 2 → xgb_oof[fold2]
+Fold 3 (20K rows):  Train on folds 1+2+4+5 → XGB predicts fold 3 → xgb_oof[fold3]
+Fold 4 (20K rows):  Train on folds 1+2+3+5 → XGB predicts fold 4 → xgb_oof[fold4]
+Fold 5 (20K rows):  Train on folds 1+2+3+4 → XGB predicts fold 5 → xgb_oof[fold5]
+</code></pre>
+
+<p>After all 5 folds, every training row has an OOF prediction. The same is done for LightGBM. Result: a table with 2 columns:</p>
+
+<pre><code>Row    | xgb_oof_prediction | lgbm_oof_prediction | actual_price
+-------|-------------------|---------------------|-------------
+Row 1  | log(623,000)      | log(618,000)        | log(625,000)
+Row 2  | log(412,000)      | log(415,000)        | log(410,000)
+Row 3  | log(870,000)      | log(855,000)        | log(880,000)
+...150,633 rows total...
+</code></pre>
+
+<div class="highlight">
+<p><strong>Why out-of-fold?</strong> If we trained XGBoost on all training data and then asked it to predict those same rows, the predictions would be "too good" — the model memorised those rows during training. OOF forces each row to be predicted by a model that has never seen it before, giving honest predictions.</p>
+</div>
+
+<h4>Step 2: Train the Ridge meta-model</h4>
+<p>Ridge Regression is a simple linear model. We train it on the 2-column OOF table:</p>
+
+<pre><code class="language-python">meta_X_train = [[xgb_oof[0], lgbm_oof[0]],    # row 0: XGB says this, LGBM says that
+                [xgb_oof[1], lgbm_oof[1]],    # row 1
+                ...150,633 rows...]
+
+ridge.fit(meta_X_train, y_log)   # Ridge learns: given both predictions, what's the best answer?
+</code></pre>
+
+<p>Ridge learned these coefficients:</p>
+<pre><code>final_log_price = 0.5704 × xgb_prediction + 0.4305 × lgbm_prediction + (–0.012)
+                  ↑ trust XGB 57%           ↑ trust LGBM 43%           ↑ small bias correction
+</code></pre>
+
+<h4>Step 3: Predict test data</h4>
+<p>For test rows, we can't generate true OOF predictions (test has no price labels). So we average the test predictions from all 5 fold models:</p>
+
+<pre><code>xgb_test_avg  = average of 5 fold XGB models predicting test rows
+lgbm_test_avg = average of 5 fold LGBM models predicting test rows
+
+final_pred = expm1( Ridge.predict([[xgb_test_avg, lgbm_test_avg]]) )
+</code></pre>
+
+<hr />
+
+<h2>Part 3 — Why Ridge and Not Something More Complex?</h2>
+
+<p>Our meta-model has only <strong>2 input features</strong> (XGB prediction and LGBM prediction). With so few inputs, a complex model would massively overfit.</p>
+
+<blockquote>
+<p><strong>Analogy:</strong> Imagine you have 2 weather forecasters — one for rain, one for temperature. You want to combine their forecasts. You could hire a junior meteorologist (Ridge — simple, reliable) or a full research team (complex neural network). With only 2 inputs, the research team would start reading tea leaves — far too complex for the job. The junior meteorologist does it fine.</p>
+</blockquote>
+
+<h3>Why Ridge specifically? (not plain Linear Regression)</h3>
+<p>Ridge adds a <strong>regularisation penalty</strong> — it discourages the model from assigning extreme weights. This prevents the coefficients from blowing up when XGB and LGBM predictions are highly correlated (which they are).</p>
+
+<pre><code>Plain Linear Regression might learn:  2.3 × XGB – 1.8 × LGBM  ← unstable, extreme weights
+Ridge (alpha=0.001) learned:          0.57 × XGB + 0.43 × LGBM ← stable, sensible weights
+</code></pre>
+
+<h3>Alpha sweep — finding the right regularisation strength</h3>
+<p>We tested 6 values of <code>alpha</code> (the regularisation strength). Lower alpha = less penalty = more freedom:</p>
+
+<table>
+<thead><tr><th>Alpha</th><th>RMSE</th><th>XGB weight</th><th>LGBM weight</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>0.001</td><td>$21,841</td><td>0.6108</td><td>0.3907</td><td>✅ Best</td></tr>
+<tr><td>0.01</td><td>$21,841</td><td>0.6107</td><td>0.3908</td><td>Same</td></tr>
+<tr><td>0.1</td><td>$21,841</td><td>0.6098</td><td>0.3917</td><td>Same</td></tr>
+<tr><td>1.0</td><td>$21,841</td><td>0.6013</td><td>0.4001</td><td>Same</td></tr>
+<tr><td>10.0</td><td>$21,843</td><td>0.5573</td><td>0.4437</td><td>Slightly worse</td></tr>
+<tr><td>100.0</td><td>$21,863</td><td>0.5095</td><td>0.4882</td><td>Worse — too much penalty forces equal weights</td></tr>
+</tbody>
+</table>
+
+<p>Alpha barely matters here — all values 0.001 to 1.0 give the same RMSE. This tells us the stacking is <strong>very stable</strong> and not sensitive to this choice.</p>
+
+<hr />
+
+<h2>Part 4 — The OOF Results Explained</h2>
+
+<table>
+<thead><tr><th>Fold</th><th>XGB RMSE</th><th>LGBM RMSE</th><th>Observation</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>$21,609</td><td>$21,832</td><td>Easiest fold — both models did well</td></tr>
+<tr><td>2</td><td>$22,502</td><td>$22,567</td><td>Hardest fold — likely contains more expensive/unusual flats</td></tr>
+<tr><td>3</td><td>$21,823</td><td>$22,019</td><td>Average fold</td></tr>
+<tr><td>4</td><td>$22,124</td><td>$22,225</td><td>Slightly harder</td></tr>
+<tr><td>5</td><td>$21,879</td><td>$21,953</td><td>Average fold</td></tr>
+<tr><td><strong>Mean</strong></td><td><strong>$21,987</strong></td><td><strong>$22,119</strong></td><td>XGB consistently better than LGBM</td></tr>
+</tbody>
+</table>
+
+<div class="warning">
+<p><strong>Why is Fold 2 so much worse ($22,502 vs $21,609)?</strong><br>
+This is normal — Fold 2 happened to contain a higher proportion of expensive flats (e.g. large executive flats or those near MRT interchanges) that are harder to predict accurately. The random split sometimes creates uneven folds. The mean across all 5 folds ($21,987) is a better estimate of real performance.</p>
+</div>
+
+<h3>OOF blend vs v6</h3>
+<pre><code>OOF best fixed blend:   $21,844  (60% XGB + 40% LGBM)
+Ridge meta-model:       $21,841  (only $3 better)
+v6 CV RMSE:             $21,818  (for comparison)
+</code></pre>
+
+<p>The stacking only improved $3 over the fixed blend — Ridge basically learned the same fixed ratio. This tells us XGBoost and LightGBM make <strong>similar types of errors</strong>, so a meta-model can't easily distinguish when to trust one over the other.</p>
+
+<hr />
+
+<h2>Part 5 — The CV–Kaggle Gap: Why It Collapsed</h2>
+
+<p>One of the most impressive results of v7 was the CV–Kaggle gap shrinking from <strong>$306 → $64</strong>:</p>
+
+<table>
+<thead><tr><th>Version</th><th>OOF / CV RMSE</th><th>Kaggle RMSE</th><th>Gap</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>v5</td><td>$21,570</td><td>$22,428</td><td>$858</td><td>Large gap — target leakage in CV</td></tr>
+<tr><td>v6</td><td>$21,818</td><td>$22,124</td><td>$306</td><td>Smaller gap — OOF encoding helped</td></tr>
+<tr><td><strong>v7</strong></td><td><strong>$21,841</strong></td><td><strong>$21,906</strong></td><td><strong>$64</strong></td><td><strong>Tiny gap — model generalises very well</strong></td></tr>
+</tbody>
+</table>
+
+<blockquote>
+<p><strong>What does the gap tell us?</strong><br>
+CV RMSE is measured on training data (where the model has "seen the neighbourhood"). Kaggle RMSE is on truly unseen test data. A small gap means the model performs almost as well on new data as on training data — this is the ideal.</p>
+<p>A large gap (like v5's $858) usually signals overfitting or leakage — the model was unknowingly given hints during training that it couldn't use on test data.</p>
+</blockquote>
+
+<p>Why did v7's gap collapse to $64? Three reasons working together:</p>
+<ol>
+<li><strong>OOF encoding</strong> (from v6) — <code>town_median_price</code> no longer leaks target information</li>
+<li><strong>OOF stacking</strong> — the meta-model was also built without seeing the test set</li>
+<li><strong>Averaging test predictions across 5 folds</strong> — reduces variance in the final test predictions</li>
+</ol>
+
+<hr />
+
+<h2>Part 6 — Full Journey: Every Version</h2>
+
+<table>
+<thead><tr><th>Version</th><th>What we tried</th><th>Kaggle RMSE</th><th>Key lesson</th></tr></thead>
+<tbody>
+<tr><td>v1</td><td>Random Forest, raw features</td><td>$25,943</td><td>Good starting point</td></tr>
+<tr><td>v2</td><td>RF + engineered features</td><td>$27,582</td><td>RF already captures these implicitly — no gain</td></tr>
+<tr><td>v3</td><td>XGBoost + feature engineering</td><td>$22,801</td><td>Gradient boosting benefits from engineered features</td></tr>
+<tr><td>v4</td><td>LightGBM (default params)</td><td>$24,952</td><td>LGBM needs tuning to beat XGB</td></tr>
+<tr><td>v5</td><td>Blend 45% XGB + 55% LGBM tuned</td><td>$22,428</td><td>Blending two models reduces variance</td></tr>
+<tr><td>v6</td><td>Log target + OOF encoding + interactions</td><td>$22,124</td><td>Log transform helps with expensive flat errors</td></tr>
+<tr><td><strong>v7</strong></td><td><strong>Stacking + street_freq + re-tuning</strong></td><td><strong>$21,906</strong></td><td><strong>OOF stacking + good features = best generalisation</strong></td></tr>
+</tbody>
+</table>
+
+<p><strong>Total improvement from baseline to v7: –$4,037 RMSE (–15.6%)</strong></p>
+
+<hr />
+
+<h2>Part 7 — Why We Train on 100% Data for the Final Submission</h2>
+
+<p>During development, we split data 80/20 to tune hyperparameters. But for the Kaggle submission, we retrained on <strong>all 150,633 rows</strong>.</p>
+
+<blockquote>
+<p><strong>Analogy:</strong> During exam preparation, you study from past papers (80%) and test yourself on mock questions (20%) to check your understanding. But on exam day, you bring everything you studied — all the past papers. You don't throw away 20% of your notes just because you used them for mock tests.</p>
+</blockquote>
+
+<table>
+<thead><tr><th>Stage</th><th>Data used</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Hyperparameter tuning (Section 6)</td><td>80% train → tune, 20% → validate</td><td>Need held-out data to evaluate params honestly</td></tr>
+<tr><td>OOF generation (Section 7)</td><td>All 150,633 rows via 5-fold CV</td><td>Every row gets honest OOF prediction</td></tr>
+<tr><td>Meta-model training (Section 9)</td><td>All 150,633 OOF predictions</td><td>Ridge sees all training rows</td></tr>
+<tr><td>Final submission (Section 11)</td><td>All 150,633 rows</td><td>More data = better model = better predictions</td></tr>
+</tbody>
+</table>
+
+<hr />
+
+<h2>Part 8 — Key Concepts Summary</h2>
+
+<table>
+<thead><tr><th>Concept</th><th>Simple Definition</th><th>Our use</th></tr></thead>
+<tbody>
+<tr><td><strong>OOF prediction</strong></td><td>Predicting a row using a model that was trained without that row</td><td>Prevents meta-model from training on "too easy" predictions</td></tr>
+<tr><td><strong>Stacking</strong></td><td>Training a 3rd model to combine predictions from 2+ base models</td><td>Ridge learns 57% XGB + 43% LGBM</td></tr>
+<tr><td><strong>Blending</strong></td><td>Fixed weighted average of models</td><td>Used in v5, v6 — replaced by stacking in v7</td></tr>
+<tr><td><strong>Meta-model</strong></td><td>The model that sits on top of base models and makes the final decision</td><td>Ridge Regression in our case</td></tr>
+<tr><td><strong>Ridge Regression</strong></td><td>Linear model with regularisation to prevent extreme weights</td><td>Combines XGB and LGBM OOF predictions</td></tr>
+<tr><td><strong>street_freq</strong></td><td>Count of how many transactions happened on each street in training</td><td>Proxy for street popularity/desirability</td></tr>
+<tr><td><strong>CV–Kaggle gap</strong></td><td>Difference between training CV RMSE and Kaggle test RMSE</td><td>Collapsed $306 → $64 in v7 — sign of good generalisation</td></tr>
+<tr><td><strong>Regularisation (alpha)</strong></td><td>A penalty that stops model weights from going extreme</td><td>Keeps Ridge coefficients stable at 0.57 / 0.43</td></tr>
+</tbody>
+</table>
+
+<hr />
+
+<h2>Part 9 — All 69 Features Used in v7</h2>
+
+<p>The v7 model takes in <strong>69 features</strong> — 53 numeric and 16 categorical. Here's the complete breakdown:</p>
+
+<h3>Numeric Features (53)</h3>
+<p><strong>38 raw features</strong> from the original dataset, plus <strong>15 engineered features</strong> (highlighted in green):</p>
+
+<table>
+<thead><tr><th>#</th><th>Feature</th><th>Type</th><th>What it represents</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>floor_area_sqm</code></td><td>Raw</td><td>Size of the flat in square metres</td></tr>
+<tr><td>2</td><td><code>lease_commence_date</code></td><td>Raw</td><td>Year the HDB lease started</td></tr>
+<tr><td>3</td><td><code>Tranc_Year</code></td><td>Raw</td><td>Year of the transaction</td></tr>
+<tr><td>4</td><td><code>Tranc_Month</code></td><td>Raw</td><td>Month of the transaction (1–12)</td></tr>
+<tr><td>5</td><td><code>mid_storey</code></td><td>Raw</td><td>Middle floor of the storey range (e.g. "07 TO 09" → 8)</td></tr>
+<tr><td>6</td><td><code>hdb_age</code></td><td>Raw</td><td>Age of the block at time of transaction</td></tr>
+<tr><td>7</td><td><code>max_floor_lvl</code></td><td>Raw</td><td>Highest floor in the block</td></tr>
+<tr><td>8</td><td><code>total_dwelling_units</code></td><td>Raw</td><td>Total number of units in the block</td></tr>
+<tr><td>9</td><td><code>Latitude</code></td><td>Raw</td><td>GPS latitude of the block</td></tr>
+<tr><td>10</td><td><code>Longitude</code></td><td>Raw</td><td>GPS longitude of the block</td></tr>
+<tr><td>11</td><td><code>Mall_Nearest_Distance</code></td><td>Raw</td><td>Distance (m) to nearest mall</td></tr>
+<tr><td>12</td><td><code>Mall_Within_500m</code></td><td>Raw</td><td>Number of malls within 500m</td></tr>
+<tr><td>13</td><td><code>Mall_Within_1km</code></td><td>Raw</td><td>Number of malls within 1km</td></tr>
+<tr><td>14</td><td><code>Mall_Within_2km</code></td><td>Raw</td><td>Number of malls within 2km</td></tr>
+<tr><td>15</td><td><code>Hawker_Nearest_Distance</code></td><td>Raw</td><td>Distance (m) to nearest hawker centre</td></tr>
+<tr><td>16</td><td><code>Hawker_Within_500m</code></td><td>Raw</td><td>Number of hawker centres within 500m</td></tr>
+<tr><td>17</td><td><code>Hawker_Within_1km</code></td><td>Raw</td><td>Number of hawker centres within 1km</td></tr>
+<tr><td>18</td><td><code>Hawker_Within_2km</code></td><td>Raw</td><td>Number of hawker centres within 2km</td></tr>
+<tr><td>19</td><td><code>hawker_food_stalls</code></td><td>Raw</td><td>Number of food stalls in nearest hawker centre</td></tr>
+<tr><td>20</td><td><code>hawker_market_stalls</code></td><td>Raw</td><td>Number of market stalls in nearest hawker centre</td></tr>
+<tr><td>21</td><td><code>mrt_nearest_distance</code></td><td>Raw</td><td>Distance (m) to nearest MRT station</td></tr>
+<tr><td>22</td><td><code>bus_interchange</code></td><td>Raw</td><td>1 if nearest MRT is also a bus interchange</td></tr>
+<tr><td>23</td><td><code>mrt_interchange</code></td><td>Raw</td><td>1 if nearest MRT is an interchange station</td></tr>
+<tr><td>24</td><td><code>mrt_latitude</code></td><td>Raw</td><td>GPS latitude of nearest MRT</td></tr>
+<tr><td>25</td><td><code>mrt_longitude</code></td><td>Raw</td><td>GPS longitude of nearest MRT</td></tr>
+<tr><td>26</td><td><code>bus_stop_nearest_distance</code></td><td>Raw</td><td>Distance (m) to nearest bus stop</td></tr>
+<tr><td>27</td><td><code>bus_stop_latitude</code></td><td>Raw</td><td>GPS latitude of nearest bus stop</td></tr>
+<tr><td>28</td><td><code>bus_stop_longitude</code></td><td>Raw</td><td>GPS longitude of nearest bus stop</td></tr>
+<tr><td>29</td><td><code>pri_sch_nearest_distance</code></td><td>Raw</td><td>Distance (m) to nearest primary school</td></tr>
+<tr><td>30</td><td><code>vacancy</code></td><td>Raw</td><td>Primary school vacancy (P1 registration)</td></tr>
+<tr><td>31</td><td><code>pri_sch_affiliation</code></td><td>Raw</td><td>1 if primary school has affiliation</td></tr>
+<tr><td>32</td><td><code>pri_sch_latitude</code></td><td>Raw</td><td>GPS latitude of nearest primary school</td></tr>
+<tr><td>33</td><td><code>pri_sch_longitude</code></td><td>Raw</td><td>GPS longitude of nearest primary school</td></tr>
+<tr><td>34</td><td><code>sec_sch_nearest_dist</code></td><td>Raw</td><td>Distance (m) to nearest secondary school</td></tr>
+<tr><td>35</td><td><code>cutoff_point</code></td><td>Raw</td><td>PSLE cut-off point of nearest secondary school</td></tr>
+<tr><td>36</td><td><code>affiliation</code></td><td>Raw</td><td>1 if secondary school has primary affiliation</td></tr>
+<tr><td>37</td><td><code>sec_sch_latitude</code></td><td>Raw</td><td>GPS latitude of nearest secondary school</td></tr>
+<tr><td>38</td><td><code>sec_sch_longitude</code></td><td>Raw</td><td>GPS longitude of nearest secondary school</td></tr>
+<tr style="background:#ecfdf5"><td>39</td><td><code>remaining_lease</code></td><td>Engineered</td><td>99 − (Tranc_Year − lease_commence_date) → years left on lease</td></tr>
+<tr style="background:#ecfdf5"><td>40</td><td><code>dist_to_cbd</code></td><td>Engineered</td><td>Haversine distance (km) from block to Raffles Place</td></tr>
+<tr style="background:#ecfdf5"><td>41</td><td><code>is_mature_estate</code></td><td>Engineered</td><td>1 if town is one of 15 mature estates (e.g. Bishan, Queenstown)</td></tr>
+<tr style="background:#ecfdf5"><td>42</td><td><code>tranc_month_sin</code></td><td>Engineered</td><td>sin(2π × month / 12) — cyclical month encoding</td></tr>
+<tr style="background:#ecfdf5"><td>43</td><td><code>tranc_month_cos</code></td><td>Engineered</td><td>cos(2π × month / 12) — cyclical month encoding</td></tr>
+<tr style="background:#ecfdf5"><td>44</td><td><code>total_sold</code></td><td>Engineered</td><td>Sum of all flat-type units sold in the block</td></tr>
+<tr style="background:#ecfdf5"><td>45</td><td><code>total_rental</code></td><td>Engineered</td><td>Sum of all rental units in the block</td></tr>
+<tr style="background:#ecfdf5"><td>46</td><td><code>rental_ratio</code></td><td>Engineered</td><td>total_rental / total_dwelling_units — block desirability proxy</td></tr>
+<tr style="background:#ecfdf5"><td>47</td><td><code>floor_area_per_room</code></td><td>Engineered</td><td>floor_area_sqm / num_rooms — spaciousness signal</td></tr>
+<tr style="background:#ecfdf5"><td>48</td><td><code>amenity_score</code></td><td>Engineered</td><td>Composite score: inverse-normalised average of MRT + mall + hawker distances</td></tr>
+<tr style="background:#ecfdf5"><td>49</td><td><code>town_median_price</code></td><td>Engineered</td><td>OOF target-encoded median resale price per town</td></tr>
+<tr style="background:#ecfdf5"><td>50</td><td><code>dist_x_storey</code></td><td>Engineered</td><td>dist_to_cbd × mid_storey — high floor near CBD is doubly premium</td></tr>
+<tr style="background:#ecfdf5"><td>51</td><td><code>lease_x_area</code></td><td>Engineered</td><td>remaining_lease × floor_area_sqm — big + newer is doubly valuable</td></tr>
+<tr style="background:#ecfdf5"><td>52</td><td><code>log_dist_to_cbd</code></td><td>Engineered</td><td>log(1 + dist_to_cbd) — captures diminishing returns of distance</td></tr>
+<tr style="background:#ecfdf5"><td>53</td><td><code>street_freq</code></td><td>Engineered ★ New in v7</td><td>Count of transactions on that street in training data</td></tr>
+</tbody>
+</table>
+
+<h3>Categorical Features (16)</h3>
+<p>These are encoded with <code>OrdinalEncoder</code> before going into XGBoost and LightGBM:</p>
+
+<table>
+<thead><tr><th>#</th><th>Feature</th><th>What it represents</th><th>Approx. unique values</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>town</code></td><td>HDB town (e.g. Bishan, Jurong West)</td><td>26</td></tr>
+<tr><td>2</td><td><code>flat_type</code></td><td>Flat size category (1 ROOM to MULTI-GENERATION)</td><td>7</td></tr>
+<tr><td>3</td><td><code>block</code></td><td>Block number/letter (e.g. "153A")</td><td>~2,500</td></tr>
+<tr><td>4</td><td><code>street_name</code></td><td>Full street address</td><td>~500</td></tr>
+<tr><td>5</td><td><code>storey_range</code></td><td>Floor band (e.g. "07 TO 09")</td><td>~17</td></tr>
+<tr><td>6</td><td><code>flat_model</code></td><td>Flat design type (e.g. Model A, Improved)</td><td>~20</td></tr>
+<tr><td>7</td><td><code>commercial</code></td><td>Y/N — block has commercial units</td><td>2</td></tr>
+<tr><td>8</td><td><code>market_hawker</code></td><td>Y/N — block has market/hawker</td><td>2</td></tr>
+<tr><td>9</td><td><code>multistorey_carpark</code></td><td>Y/N — block has multi-storey carpark</td><td>2</td></tr>
+<tr><td>10</td><td><code>precinct_pavilion</code></td><td>Y/N — block has precinct pavilion</td><td>2</td></tr>
+<tr><td>11</td><td><code>postal</code></td><td>6-digit postal code</td><td>~9,000</td></tr>
+<tr><td>12</td><td><code>planning_area</code></td><td>URA planning area (finer than town)</td><td>~55</td></tr>
+<tr><td>13</td><td><code>mrt_name</code></td><td>Name of nearest MRT station</td><td>~130</td></tr>
+<tr><td>14</td><td><code>bus_stop_name</code></td><td>Name of nearest bus stop</td><td>~3,000</td></tr>
+<tr><td>15</td><td><code>pri_sch_name</code></td><td>Name of nearest primary school</td><td>~190</td></tr>
+<tr><td>16</td><td><code>sec_sch_name</code></td><td>Name of nearest secondary school</td><td>~140</td></tr>
+</tbody>
+</table>
+
+<div class="highlight">
+<p><strong>Why keep both raw and engineered versions of some signals?</strong><br>
+For example, we keep raw <code>Latitude</code>/<code>Longitude</code> AND engineered <code>dist_to_cbd</code>. Latitude and Longitude let the model learn fine-grained geographic patterns (e.g. specific neighbourhoods). <code>dist_to_cbd</code> gives it an explicit "how far from city centre" number. Both together give the model more ways to capture location effects.</p>
+</div>
+
+<hr />
+
+<h2>What Could We Try Next?</h2>
+<ul>
+  <li><strong>CatBoost as third base model</strong> — handles categorical features (town, flat_type, street_name) natively without OrdinalEncoder. Stack becomes Ridge on [XGB, LGBM, CAT] OOF — 3 independent signals for Ridge to combine.</li>
+  <li><strong>Optuna hyperparameter tuning</strong> — Bayesian optimisation that learns from previous trials (smarter than random search). 100 Optuna trials ≈ 300 random trials in quality.</li>
+  <li><strong>block_num encoding</strong> — extract the numeric part of block number (e.g. "153A" → 153). Corner blocks or low-numbered landmark blocks sometimes carry premiums.</li>
+</ul>
+
+<hr />
+<p style="font-size:0.82em;color:#9ca3af;text-align:center;">Generated for self-study | HDB Resale Price Regression Challenge | v7 best score: $21,905.74 Kaggle RMSE</p>
+</body>
+</html>
