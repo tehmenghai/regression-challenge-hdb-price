@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-25
+
+### Added
+- v9 experiment notebook (`08_v9_stack.ipynb`) — wider RandomizedSearchCV grid (40 trials), postal_sector OOF median encoding, flat_model OOF median encoding, block_num extraction (Kaggle RMSE 21,755.56)
+- v10 experiment notebook (`09_postal_smoothing.ipynb`) — min_count=10 floor on rare postal sectors to reduce OOF→Kaggle gap (Ridge meta OOF RMSE $21,621)
+- Study guides for v9 stack and model tuning notebooks (HTML + MD in `outputs/`)
+- Submission files: `sub_v9_stack.csv`, `sub_v10_postal_smooth.csv`
+
 ## [1.1.0] - 2026-04-23
 
 ### Added
