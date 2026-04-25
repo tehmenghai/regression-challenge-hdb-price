@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HDB Resale Price — Team Knowledge Base</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f1f5f9; color: #1a1a1a; min-height: 100vh;
+  }
+
+  /* ── Hero Header ── */
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    color: #fff; padding: 48px 32px 40px;
+  }
+  .hero-inner { max-width: 960px; margin: 0 auto; }
+  .hero h1 { font-size: 1.85rem; font-weight: 800; margin-bottom: 6px; }
+  .hero-sub { color: #94a3b8; font-size: 0.95rem; margin-bottom: 24px; }
+  .hero-scores {
+    display: flex; flex-wrap: wrap; gap: 20px;
+  }
+  .hs-item { background: rgba(255,255,255,0.08); border-radius: 10px; padding: 14px 20px; min-width: 140px; }
+  .hs-num   { font-size: 1.45rem; font-weight: 800; color: #38bdf8; }
+  .hs-label { font-size: 0.78rem; color: #94a3b8; margin-top: 2px; }
+  .hs-item.gold .hs-num { color: #fbbf24; }
+  .hs-item.green .hs-num { color: #34d399; }
+
+  /* ── Main content ── */
+  .main { max-width: 960px; margin: 0 auto; padding: 36px 24px 80px; }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #64748b;
+    margin: 36px 0 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::after { content:''; flex:1; height:1px; background:#e2e8f0; }
+
+  /* ── Featured card (Journey) ── */
+  .card-featured {
+    background: #fff; border-radius: 12px;
+    border: 2px solid #d97706;
+    box-shadow: 0 4px 20px rgba(217,119,6,0.15);
+    padding: 28px 32px;
+    display: flex; align-items: center; gap: 28px;
+    text-decoration: none; color: inherit;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .card-featured:hover { box-shadow: 0 8px 30px rgba(217,119,6,0.25); transform: translateY(-2px); }
+  .card-featured .cf-icon { font-size: 2.8rem; flex-shrink: 0; }
+  .card-featured .cf-body h2 { font-size: 1.2rem; color: #d97706; margin-bottom: 4px; }
+  .card-featured .cf-body p  { font-size: 0.92rem; color: #475569; line-height: 1.5; }
+  .card-featured .cf-badge {
+    margin-top: 10px; display: inline-flex; gap: 8px; flex-wrap: wrap;
+  }
+  .badge {
+    font-size: 0.76rem; font-weight: 600; padding: 3px 10px;
+    border-radius: 12px; display: inline-block;
+  }
+  .b-gold  { background: #fef3c7; color: #92400e; }
+  .b-green { background: #d1fae5; color: #065f46; }
+  .b-blue  { background: #dbeafe; color: #1e40af; }
+  .b-gray  { background: #f1f5f9; color: #475569; }
+
+  /* ── Guide card grid ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  .card {
+    background: #fff; border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    padding: 22px 22px 20px;
+    text-decoration: none; color: inherit;
+    transition: box-shadow 0.2s, transform 0.2s;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.1); transform: translateY(-2px); }
+  .card-icon { font-size: 1.8rem; }
+  .card h3   { font-size: 1rem; font-weight: 700; color: #0369a1; line-height: 1.3; }
+  .card p    { font-size: 0.85rem; color: #6b7280; line-height: 1.5; flex: 1; }
+  .card-meta { font-size: 0.78rem; color: #9ca3af; margin-top: 4px; }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center; padding: 28px 20px;
+    color: #94a3b8; font-size: 0.82rem;
+    border-top: 1px solid #e5e7eb; background: #fff;
+  }
+  .footer strong { color: #475569; }
+
+  /* ── Responsive ── */
+  @media (max-width: 700px) {
+    .card-grid { grid-template-columns: 1fr; }
+    .card-featured { flex-direction: column; text-align: center; }
+    .hero h1 { font-size: 1.4rem; }
+    .hero-scores { flex-direction: column; gap: 12px; }
+  }
+  @media (min-width: 701px) and (max-width: 900px) {
+    .card-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ── Search ── */
+  .search-wrap { max-width: 960px; margin: 0 auto; padding: 28px 24px 0; }
+  #kb-search {
+    width: 100%; padding: 12px 18px; font-size: 1rem;
+    border: 2px solid #e2e8f0; border-radius: 10px;
+    background: #fff; color: #1a1a1a; outline: none;
+    transition: border-color 0.2s;
+  }
+  #kb-search:focus { border-color: #0369a1; }
+  #search-results { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .sr-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 16px 20px; cursor: pointer;
+    text-decoration: none; color: inherit; display: block;
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+  .sr-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); transform: translateY(-1px); }
+  .sr-doc  { font-size: 0.78rem; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+  .sr-head { font-size: 1rem; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+  .sr-snip { font-size: 0.86rem; color: #6b7280; line-height: 1.5; }
+  .sr-snip b, .sr-head b { color: #d97706; font-weight: 700; background: #fef9c3; border-radius: 2px; padding: 0 2px; }
+  .sr-none { color: #9ca3af; font-size: 0.92rem; padding: 8px 0; }
+</style>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Resolve data-doc links
+    document.querySelectorAll('[data-doc]').forEach(function (el) {
+      el.href = el.dataset.doc;
+    });
+
+    // ── Search ──────────────────────────────────────────────
+    var idx = null;
+    var input   = document.getElementById('kb-search');
+    var results = document.getElementById('search-results');
+    var main    = document.getElementById('main-content');
+
+    // Load index — same folder whether local or CloudFront
+    var indexUrl = 'search_index.json';
+
+    fetch(indexUrl)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { idx = data; })
+      .catch(function () { /* search silently unavailable */ });
+
+    function highlight(text, term) {
+      if (!term) return text;
+      var re = new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      return text.replace(re, '<b>$1</b>');
+    }
+
+    function doSearch(query) {
+      if (!idx || query.length < 2) {
+        results.innerHTML = '';
+        main.style.display = '';
+        return;
+      }
+
+      var q = query.toLowerCase();
+      var hits = [];
+
+      idx.forEach(function (doc) {
+        // Title-level match
+        if (doc.title.toLowerCase().indexOf(q) !== -1) {
+          hits.push({ doc: doc, heading: doc.title, anchor: '', snippet: '', score: 2 });
+        }
+        // Section-level match
+        doc.sections.forEach(function (sec) {
+          var inHead = sec.heading.toLowerCase().indexOf(q) !== -1;
+          var inSnip = sec.snippet.toLowerCase().indexOf(q) !== -1;
+          if (inHead || inSnip) {
+            hits.push({ doc: doc, heading: sec.heading, anchor: sec.anchor, snippet: sec.snippet, score: inHead ? 1 : 0 });
+          }
+        });
+      });
+
+      // Sort: title matches first, then heading matches, then snippet matches
+      hits.sort(function (a, b) { return b.score - a.score; });
+
+      main.style.display = 'none';
+
+      if (hits.length === 0) {
+        results.innerHTML = '<p class="sr-none">No results for "' + query + '"</p>';
+        return;
+      }
+
+      results.innerHTML = hits.map(function (h) {
+        var url = h.doc.file + (h.anchor ? '#' + h.anchor : '');
+        var headHtml = highlight(h.heading, query);
+        var snipHtml = h.snippet ? highlight(h.snippet.slice(0, 180), query) + '…' : '';
+        return '<a class="sr-card" href="' + url + '">' +
+          '<div class="sr-doc">' + h.doc.title + '</div>' +
+          '<div class="sr-head">' + headHtml + '</div>' +
+          (snipHtml ? '<div class="sr-snip">' + snipHtml + '</div>' : '') +
+          '</a>';
+      }).join('');
+    }
+
+    input.addEventListener('input', function () {
+      var q = input.value.trim();
+      if (q.length === 0) {
+        results.innerHTML = '';
+        main.style.display = '';
+      } else {
+        doSearch(q);
+      }
+    });
+  });
+</script>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-inner">
+    <h1>HDB Resale Price &mdash; Team Knowledge Base</h1>
+    <p class="hero-sub">NTU SCTP Module 3 &bull; Kaggle Competition &bull; Team 3</p>
+    <div class="hero-scores">
+      <div class="hs-item gold">
+        <div class="hs-num">$21,756</div>
+        <div class="hs-label">Best Kaggle RMSE (v9)</div>
+      </div>
+      <div class="hs-item">
+        <div class="hs-num">$289</div>
+        <div class="hs-label">Gap to 1st place</div>
+      </div>
+      <div class="hs-item green">
+        <div class="hs-num">&minus;$4,187</div>
+        <div class="hs-label">Total improvement from v1</div>
+      </div>
+      <div class="hs-item">
+        <div class="hs-num">9</div>
+        <div class="hs-label">Submissions &bull; v1&ndash;v9</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Search -->
+<div class="search-wrap">
+  <input id="kb-search" type="search" placeholder="Search docs… e.g. OOF, Ridge, feature engineering, Extra Trees" autocomplete="off" spellcheck="false">
+  <div id="search-results"></div>
+</div>
+
+<!-- Main -->
+<div class="main" id="main-content">
+
+  <!-- Model Journey -->
+  <div class="section-label">&#128506; Model Journey</div>
+
+  <a class="card-featured" href="#" data-doc="submission_journey.html">
+    <div class="cf-icon">&#128202;</div>
+    <div class="cf-body">
+      <h2>Full Submission Journey — v1 to v9</h2>
+      <p>Track every Kaggle submission: what changed, why we tried it, CV vs Kaggle RMSE, key learnings, and what&rsquo;s next. Updated after every submission.</p>
+      <div class="cf-badge">
+        <span class="badge b-gold">&#127942; Live doc</span>
+        <span class="badge b-green">9 versions</span>
+        <span class="badge b-blue">v1 $25,943 &rarr; v9 $21,756</span>
+      </div>
+    </div>
+  </a>
+
+  <!-- Study Guides -->
+  <div class="section-label">&#128218; Study Guides</div>
+
+  <div class="card-grid">
+
+    <a class="card" href="#" data-doc="baseline_explained.html">
+      <div class="card-icon">&#127795;</div>
+      <h3>Baseline Model — Random Forest</h3>
+      <p>How we built the v1 RF baseline ($25,943). Ridge vs RF comparison, 5-fold CV, feature importance, and what the baseline taught us.</p>
+      <div class="card-meta"><span class="badge b-gray">v1</span> <span class="badge b-blue">02_baseline.ipynb</span></div>
+    </a>
+
+    <a class="card" href="#" data-doc="feature_engineering_explained.html">
+      <div class="card-icon">&#9881;&#65039;</div>
+      <h3>Feature Engineering — 11 Features</h3>
+      <p>Every engineered feature explained: remaining_lease, dist_to_cbd, is_mature_estate, cyclical month, town_median_price, amenity_score and more.</p>
+      <div class="card-meta"><span class="badge b-gray">v2&ndash;v3</span> <span class="badge b-blue">03_feature_eng.ipynb</span></div>
+    </a>
+
+    <a class="card" href="#" data-doc="model_tuning_explained.html">
+      <div class="card-icon">&#128295;</div>
+      <h3>Model Tuning — XGBoost &amp; LightGBM</h3>
+      <p>RandomizedSearchCV tuning walkthrough. How we got from default LGBM ($24,952) to a tuned blend ($22,428). Hyperparameter intuition explained.</p>
+      <div class="card-meta"><span class="badge b-gray">v3&ndash;v5</span> <span class="badge b-blue">04_model_tuning.ipynb</span></div>
+    </a>
+
+    <a class="card" href="#" data-doc="models_explained.html">
+      <div class="card-icon">&#129302;</div>
+      <h3>XGBoost vs LightGBM vs Extra Trees</h3>
+      <p>Deep dive into all three base models in our v8 stack. Bagging vs boosting, leaf-wise growth, regularisation, and how each contributes to the final prediction.</p>
+      <div class="card-meta"><span class="badge b-gray">v8</span> <span class="badge b-blue">07_et_stack.ipynb</span></div>
+    </a>
+
+    <a class="card" href="#" data-doc="v8_et_stack_explained.html">
+      <div class="card-icon">&#127381;</div>
+      <h3>v8 Extra Trees Stack — Full Walkthrough</h3>
+      <p>How adding ExtraTrees as a 3rd base model broke the $22k barrier. OOF stacking architecture, Ridge meta coefficients, and why ET helps despite being weaker alone.</p>
+      <div class="card-meta"><span class="badge b-gold">v8 · $21,805</span> <span class="badge b-blue">07_et_stack.ipynb</span></div>
+    </a>
+
+    <a class="card" href="#" data-doc="stacking_explained.html">
+      <div class="card-icon">&#127922;</div>
+      <h3>Stacking Explained — Ridge Meta-Model</h3>
+      <p>How stacking beat fixed blending. Out-of-fold prediction generation, Ridge on XGB+LGBM OOF, street_freq encoding, and why the CV&ndash;Kaggle gap collapsed to $65.</p>
+      <div class="card-meta"><span class="badge b-gray">v7</span> <span class="badge b-blue">06_stacking.ipynb</span></div>
+    </a>
+
+    <a class="card" href="#" data-doc="05_pca_exploration_explained.html">
+      <div class="card-icon">&#128300;</div>
+      <h3>PCA Exploration</h3>
+      <p>Unsupervised analysis of 55 numerical HDB features. Scree plot reveals genuinely high-dimensional data (22 PCs for 80% variance), confirming floor area as PC1 and geography as PC2.</p>
+      <div class="card-meta"><span class="badge b-gray">Experiment</span> <span class="badge b-blue">05_pca_exploration.ipynb</span></div>
+    </a>
+
+    <a class="card" href="#" data-doc="04_model_tuning_explained.html">
+      <div class="card-icon">&#128300;</div>
+      <h3>Model Tuning Deep Dive — XGBoost &amp; LightGBM</h3>
+      <p>Full walkthrough of gradient boosting intuition, RandomizedSearchCV tuning (best CV RMSE $22,748), and blending. Shows how the switch from RF alone cut $4,000 off validation RMSE.</p>
+      <div class="card-meta"><span class="badge b-gray">Experiment</span> <span class="badge b-blue">04_model_tuning.ipynb</span></div>
+    </a>
+
+    <a class="card" href="#" data-doc="08_v9_stack_explained.html">
+      <div class="card-icon">&#128640;</div>
+      <h3>v9: Wider Grid + Richer Encoding</h3>
+      <p>How replacing 9,125-level ordinal postal encoding with OOF postal-sector medians and widening the RandomizedSearchCV grid to 40 trials cut Kaggle RMSE to $21,756. Includes double-OOF anti-leakage design and Ridge meta-coefficients.</p>
+      <div class="card-meta"><span class="badge b-gold">v9 · $21,756</span> <span class="badge b-blue">08_v9_stack.ipynb</span></div>
+    </a>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <strong>Team 3</strong> &bull; NTU SCTP Advanced Professional Certificate in Data Science &amp; AI &bull;
+  Module 3.4 Supervised Learning Advanced &bull;
+  Last updated: 2026-04-23
+</div>
+
+</body>
+</html>

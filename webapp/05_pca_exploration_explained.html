@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PCA Exploration</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 24px 80px; color: #1a1a1a; line-height: 1.7; background: #fafafa; }
+h1 { font-size: 2rem; color: #1a1a1a; border-bottom: 3px solid #0369a1; padding-bottom: 12px; }
+h2 { font-size: 1.4rem; color: #0369a1; margin-top: 48px; border-left: 4px solid #0369a1; padding-left: 12px; }
+h3 { font-size: 1.1rem; color: #374151; margin-top: 28px; }
+h4 { font-size: 1rem; color: #6b7280; margin-top: 20px; }
+code { background: #1e293b; color: #e2e8f0; padding: 2px 7px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.88em; }
+pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 8px; overflow-x: auto; font-size: 0.88em; line-height: 1.6; margin: 16px 0; }
+pre code { background: none; padding: 0; color: inherit; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.93em; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+th { background: #0369a1; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; }
+tr:last-child td { border-bottom: none; }
+tr:nth-child(even) td { background: #f8fafc; }
+blockquote { background: #eff6ff; border-left: 4px solid #0369a1; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #1e3a5f; }
+blockquote p { margin: 0; }
+.highlight { background: #ecfdf5; border-left: 4px solid #059669; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #065f46; }
+.highlight p { margin: 0; }
+.warning { background: #fffbeb; border-left: 4px solid #f59e0b; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #78350f; }
+.warning p { margin: 0; }
+hr { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+p { margin: 10px 0; }
+ul, ol { padding-left: 24px; }
+li { margin: 6px 0; }
+.badge { display: inline-block; background: #0369a1; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; margin-right: 6px; vertical-align: middle; font-family: 'Courier New', monospace; }
+.badge-green { background: #059669; }
+.badge-orange { background: #d97706; }
+.score-box { background: white; border: 2px solid #0369a1; border-radius: 12px; padding: 20px 28px; margin: 24px 0; display: flex; gap: 40px; flex-wrap: wrap; }
+.score-item { text-align: center; }
+.score-label { font-size: 0.82em; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.score-value { font-size: 1.6rem; font-weight: 700; color: #0369a1; }
+.score-delta { font-size: 0.88em; color: #059669; font-weight: 600; }
+</style>
+<script src="nav.js"></script>
+</head>
+<body>
+
+<h1>PCA Exploration<br><small style="font-size:0.55em;color:#6b7280;">Unsupervised dimensionality analysis of 55 numerical HDB features</small></h1>
+
+<div class="score-box">
+  <div class="score-item">
+    <div class="score-label">PCs for 80% Variance</div>
+    <div class="score-value" style="color:#0369a1">22</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">PCs for 90% Variance</div>
+    <div class="score-value" style="color:#0369a1">28</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">PC1+PC2+PC3 Combined</div>
+    <div class="score-value" style="color:#059669">35.6%</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Features Analysed</div>
+    <div class="score-value" style="color:#6b7280">55</div>
+  </div>
+</div>
+
+<div class="highlight"><p><strong>Key insight:</strong> The HDB dataset is genuinely high-dimensional — no 2–3 component shortcut exists — with floor area dominating PC1 and geography forming a distinct second axis (PC2), validating full-feature tree models over PCA-compressed linear approaches.</p></div>
+
+<h2 id="overview">Overview</h2>
+
+<p>This notebook applies Principal Component Analysis to 150,634 training rows using all 55 numerical columns, after median imputation and StandardScaler normalisation. The goal is diagnostic: understand how many truly independent dimensions the data has, and which features are the primary drivers of variation.</p>
+
+<p>The answer is sobering for anyone hoping to compress the feature set: you need <strong>22 principal components</strong> to explain 80% of variance, and <strong>33 for 95%</strong>. This is not a low-dimensional dataset. The scree plot shows a gentle, sustained decline rather than a sharp elbow — every feature is carrying some unique information.</p>
+
+<p>On the positive side, the 2D scatter confirms that PC1 correlates with resale price (higher-priced flats cluster at higher PC1 values), and the loading analysis pinpoints exactly which features matter most. These findings directly inform feature engineering choices in subsequent modelling notebooks.</p>
+
+<h2 id="section-1-select-numerical-features">Section 1 — Select Numerical Features</h2>
+
+<p>PCA operates only on numbers. After dropping <code>id</code>, <code>resale_price</code> (the target), and <code>Tranc_YearMonth</code>, 55 numerical columns remain. These span:</p>
+
+<ul>
+  <li><strong>Flat attributes:</strong> floor area, storey, age, max floors, lease commencement</li>
+  <li><strong>Block composition:</strong> unit-mix counts (1-room to executive, sold and rental)</li>
+  <li><strong>Proximity:</strong> distances and counts for MRT, malls, hawker centres, primary and secondary schools</li>
+  <li><strong>Coordinates:</strong> flat, MRT, school, bus stop latitudes and longitudes</li>
+</ul>
+
+<pre><code>DROP = ['id', 'resale_price', 'Tranc_YearMonth']
+num_cols = [c for c in train.select_dtypes(include='number').columns
+            if c not in DROP]
+# → 55 numerical features across 150,634 rows</code></pre>
+
+<h2>Section 2 — Impute &amp; Scale</h2>
+
+<p>PCA requires complete, comparable data. Two preprocessing steps handle this:</p>
+
+<ol>
+  <li><strong>Median imputation</strong> — fills NaNs without distorting distributions (robust to outliers vs. mean)</li>
+  <li><strong>StandardScaler</strong> — centres and scales each feature to mean=0, std=1, so no large-magnitude feature (e.g., latitude ~1.3 vs. mall count ~5) artificially dominates the principal components</li>
+</ol>
+
+<pre><code>imputer  = SimpleImputer(strategy='median')
+X_imp    = imputer.fit_transform(X_raw)
+scaler   = StandardScaler()
+X_scaled = scaler.fit_transform(X_imp)
+# → 150,634 rows × 55 features, zero-mean unit-variance</code></pre>
+
+<h2 id="section-3-scree-plot-how-many-pcs-matter">Section 3 — Scree Plot: How Many PCs Matter?</h2>
+
+<table>
+  <thead><tr><th>Variance Threshold</th><th>PCs Required</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>80%</td><td><strong>22</strong></td><td>Still need more than a third of all features</td></tr>
+    <tr><td>90%</td><td><strong>28</strong></td><td>More than half the feature count</td></tr>
+    <tr><td>95%</td><td><strong>33</strong></td><td>60% of all 55 features</td></tr>
+  </tbody>
+</table>
+
+<div class="warning"><p><strong>High-dimensionality warning:</strong> The first three PCs together explain only 35.6% of variance. This rules out aggressive PCA compression for regression — a 10-component reduction would discard over 60% of the information.</p></div>
+
+<p>The scree plot shows a shallow, extended decline with no sharp elbow. This pattern indicates many features each contribute a modest, non-redundant amount of variance — exactly the kind of dataset where gradient boosting trees thrive, since they can use all 55 features simultaneously without caring about scale or orthogonality.</p>
+
+<h2 id="section-4-2d-scatter-pc1-vs-pc2">Section 4 — 2D Scatter: PC1 vs PC2</h2>
+
+<p>8,000 randomly sampled flats are projected onto PC1 and PC2. Two colour schemes reveal different structure:</p>
+
+<h3>Coloured by Resale Price</h3>
+<p>A visible price gradient runs along PC1: flats with higher PC1 scores tend to be more expensive (green→red from left to right). The gradient is noisy and overlapping — price isn't purely determined by the first two PCs — but the signal is clear enough to confirm that PC1 captures the dominant price-driving dimensions.</p>
+
+<h3>Coloured by Town (Top 8)</h3>
+<p>Premium towns (Bishan, Bukit Timah) cluster at higher PC1 values and distinct PC2 positions. Mass-market towns (Woodlands, Jurong West) spread differently. Significant overlap remains, meaning no single 2D projection cleanly separates all towns — but the partial clustering validates that location features are carrying genuine geographic variance.</p>
+
+<pre><code>pca2 = PCA(n_components=2, random_state=42)
+Z    = pca2.fit_transform(X_scaled)
+# PC1 explains ~19-20% variance; PC2 ~9-10%</code></pre>
+
+<h2>Section 5 — Feature Loadings: What Drives PC1 &amp; PC2?</h2>
+
+<p>Each loading is the weight a feature gets in the linear combination defining that PC. Positive = moves with the PC; negative = moves against it.</p>
+
+<table>
+  <thead><tr><th>PC</th><th>Dominant positive loadings</th><th>Dominant negative loadings</th><th>Interpretation</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>PC1</strong></td>
+      <td>floor_area_sqm, floor_area_sqft, exec_sold, 5room_sold</td>
+      <td>mrt_nearest_distance, hawker_nearest_distance</td>
+      <td>"Size &amp; amenity density" — bigger flats closer to transport = high PC1</td>
+    </tr>
+    <tr>
+      <td><strong>PC2</strong></td>
+      <td>Latitude, pri_sch_latitude, mrt_latitude, sec_sch_latitude</td>
+      <td>Longitude, mrt_longitude, bus_stop_longitude</td>
+      <td>"Geographic axis" — captures north–south position across Singapore</td>
+    </tr>
+  </tbody>
+</table>
+
+<pre><code>loadings = pd.DataFrame(
+    pca2.components_.T,
+    index=num_cols,
+    columns=['PC1', 'PC2']
+).sort_values('PC1', ascending=False)</code></pre>
+
+<div class="highlight"><p><strong>PC1 confirms EDA findings:</strong> <code>floor_area_sqm</code> is the single largest contributor to PC1, consistent with the ~0.84 correlation with price seen in earlier exploratory analysis. MRT proximity loading negative on PC1 means closer MRT = higher PC1, aligning with expected price premiums.</p></div>
+
+<h2 id="section-6-interpretation-summary">Section 6 — Interpretation Summary</h2>
+
+<table>
+  <thead><tr><th>Observation</th><th>Implication for Modelling</th></tr></thead>
+  <tbody>
+    <tr><td>22 PCs needed for 80% variance</td><td>Use all features; avoid PCA compression in the model pipeline</td></tr>
+    <tr><td>PC1 = size + amenity density</td><td>floor_area_sqm interaction features are well-motivated</td></tr>
+    <tr><td>PC2 = geographic latitude/longitude</td><td>Lat/lon and town encoding carry distinct, non-redundant signal</td></tr>
+    <tr><td>Town clustering in 2D</td><td>Frequency encoding or target encoding of town is justified</td></tr>
+    <tr><td>PC1+PC2+PC3 = 35.6%</td><td>No cheap low-dimensional shortcut exists; ensembles benefit from the full feature space</td></tr>
+  </tbody>
+</table>
+
+<h3>Limitations</h3>
+<ul>
+  <li>PCA only uses the 55 numerical columns — categorical features (town, flat_type, flat_model) are excluded and may carry additional structure</li>
+  <li>PCA maximises <strong>variance</strong>, not <strong>price predictability</strong>; a feature can be low-loading in PCA yet highly predictive in regression</li>
+  <li>PCA features are not used as model inputs in subsequent notebooks — this analysis is purely diagnostic</li>
+</ul>
+
+<h2 id="key-takeaways">Key Takeaways</h2>
+
+<ul>
+  <li><strong>High-dimensional data confirmed:</strong> 22 PCs needed for 80% variance — no shortcut dimensionality reduction.</li>
+  <li><strong>Floor area dominates PC1</strong>, directly aligning with EDA correlation findings and justifying size-based interaction features.</li>
+  <li><strong>Geography forms a distinct second axis (PC2)</strong>, validating investment in lat/lon features, MRT distance engineering, and town encoding.</li>
+  <li><strong>Price gradient is visible in 2D PCA space</strong> but noisy — full-feature gradient boosting trees will significantly outperform PCA-compressed models.</li>
+  <li><strong>The feature set is information-rich with low redundancy</strong> — each of the 55 numerical features contributes something unique, supporting the wide feature set used in v6–v8 model notebooks.</li>
+</ul>
+
+<hr>
+<p style="color:#9ca3af;font-size:0.85em;text-align:center;">
+  <span class="badge" style="background:#6b7280;">Experiment</span>
+  <span class="badge">05_pca_exploration.ipynb</span>
+  Team 3 · NTU SCTP Module 3 · 2026-04-23
+</p>
+</body>
+</html>

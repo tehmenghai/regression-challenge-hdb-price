@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>08 — v9: RandomizedSearchCV (wider grid) + Richer Feature Encoding</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 24px 80px; color: #1a1a1a; line-height: 1.7; background: #fafafa; }
+h1 { font-size: 2rem; color: #1a1a1a; border-bottom: 3px solid #0369a1; padding-bottom: 12px; }
+h2 { font-size: 1.4rem; color: #0369a1; margin-top: 48px; border-left: 4px solid #0369a1; padding-left: 12px; }
+h3 { font-size: 1.1rem; color: #374151; margin-top: 28px; }
+h4 { font-size: 1rem; color: #6b7280; margin-top: 20px; }
+code { background: #1e293b; color: #e2e8f0; padding: 2px 7px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.88em; }
+pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 8px; overflow-x: auto; font-size: 0.88em; line-height: 1.6; margin: 16px 0; }
+pre code { background: none; padding: 0; color: inherit; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.93em; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+th { background: #0369a1; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; }
+tr:last-child td { border-bottom: none; }
+tr:nth-child(even) td { background: #f8fafc; }
+blockquote { background: #eff6ff; border-left: 4px solid #0369a1; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #1e3a5f; }
+blockquote p { margin: 0; }
+.highlight { background: #ecfdf5; border-left: 4px solid #059669; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #065f46; }
+.highlight p { margin: 0; }
+.warning { background: #fffbeb; border-left: 4px solid #f59e0b; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #78350f; }
+.warning p { margin: 0; }
+hr { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+p { margin: 10px 0; }
+ul, ol { padding-left: 24px; }
+li { margin: 6px 0; }
+.badge { display: inline-block; background: #0369a1; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; margin-right: 6px; vertical-align: middle; font-family: 'Courier New', monospace; }
+.badge-green { background: #059669; }
+.badge-orange { background: #d97706; }
+.score-box { background: white; border: 2px solid #0369a1; border-radius: 12px; padding: 20px 28px; margin: 24px 0; display: flex; gap: 40px; flex-wrap: wrap; }
+.score-item { text-align: center; }
+.score-label { font-size: 0.82em; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.score-value { font-size: 1.6rem; font-weight: 700; color: #0369a1; }
+.score-delta { font-size: 0.88em; color: #059669; font-weight: 600; }
+</style>
+<script src="nav.js"></script>
+</head>
+<body>
+
+<h1>08 — v9: Wider Grid + Richer Encoding<br><small style="font-size:0.55em;color:#6b7280;">postal_sector OOF encoding + flat_model OOF encoding + wider RandomizedSearchCV grids</small></h1>
+
+<div class="score-box">
+  <div class="score-item">
+    <div class="score-label">v9 Kaggle RMSE</div>
+    <div class="score-value" style="color:#d97706">$21,756</div>
+    <div class="score-delta">↓ from v8 $21,805</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Ridge Meta OOF RMSE</div>
+    <div class="score-value" style="color:#059669">$21,627</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">LGBM Val RMSE</div>
+    <div class="score-value" style="color:#0369a1">$21,541</div>
+    <div class="score-delta">Best single model</div>
+  </div>
+</div>
+
+<div class="highlight"><p><strong>Key insight:</strong> Replacing 9,125-level ordinal-encoded <code>postal</code> with a 598-level OOF median encoding (<code>postal_sector_median_price</code>) gives trees a real geographic price signal — the single largest change in v9.</p></div>
+
+<h2 id="what-changes-vs-v8">What Changes vs v8</h2>
+
+<table>
+  <thead><tr><th>Change</th><th>Why</th><th>Expected Gain</th></tr></thead>
+  <tbody>
+    <tr><td><code>postal_sector_median_price</code> OOF</td><td>Replaced 9,125-level ordinal noise with real geographic price signal</td><td>~$200–400</td></tr>
+    <tr><td><code>flat_model_median_price</code> OOF</td><td>Type S2 vs Improved price spread ~$550K — direct price-tier signal</td><td>~$50–150</td></tr>
+    <tr><td><code>block_num</code> numeric</td><td>Replaced 2,514-level ordinal noise with actual number</td><td>~$50–100</td></tr>
+    <tr><td>Wider RandomizedSearchCV (40 trials)</td><td>More combinations searched; <code>reg_alpha</code>/<code>reg_lambda</code> added to grid</td><td>~$50–150</td></tr>
+  </tbody>
+</table>
+
+<h2 id="feature-engineering-new-features">Feature Engineering — New Features</h2>
+
+<p>All v8 features carry forward unchanged. Three new features are added:</p>
+
+<pre><code># 1. Postal sector: first 4 chars ("520123" → "5201")
+df['postal_sector'] = df['postal'].astype(str).str[:4]
+
+# 2. Block number: extract digits ("123A" → 123)
+df['block_num'] = pd.to_numeric(
+    df['block'].astype(str).str.extract(r'(\d+)')[0], errors='coerce'
+).fillna(0)</code></pre>
+
+<p><code>postal</code> and <code>block</code> (raw high-cardinality columns) are <strong>dropped</strong> entirely. <code>postal_sector</code> is used only to compute its OOF median price — the final model sees only the numeric <code>postal_sector_median_price</code>.</p>
+
+<blockquote><p><strong>Why 4 characters?</strong> Singapore postal codes are 6 digits. The first 2 digits are the sector (28 sectors) and digits 3–4 are the district. Using 4 characters gives 598 unique groups — fine enough to distinguish neighbourhoods, coarse enough to have enough samples per group for a stable median.</p></blockquote>
+
+<h2 id="per-fold-oof-target-encoding">Per-Fold OOF Target Encoding</h2>
+
+<p>Target encoding replaces a categorical group with its median resale price. The risk: if you compute the median on the full training set, each row's encoding contains information about its own label — this is data leakage, and it inflates cross-validation scores.</p>
+
+<p><strong>OOF encoding</strong> prevents this. The data is split into 5 folds. For each fold, only the other 4 folds are used to compute the median map. Each row's encoding is based only on rows it never saw during training.</p>
+
+<pre><code>def oof_group_median(group_series, y_series, n_splits=5, random_state=42):
+    encoded    = np.zeros(len(groups))
+    global_med = np.median(y)
+    for tr_idx, va_idx in kf.split(groups):
+        # Compute map from fold-train rows only
+        fold_map = {g: np.median(ps) for g, ps in ...}
+        # Apply to fold-val rows
+        for i in va_idx:
+            encoded[i] = fold_map.get(groups[i], global_med)
+    return encoded</code></pre>
+
+<p>Applied to: <code>town</code> → <code>town_median_price</code>, <code>postal_sector</code> → <code>postal_sector_median_price</code>, <code>flat_model</code> → <code>flat_model_median_price</code>.</p>
+
+<div class="warning"><p><strong>Double OOF:</strong> These three encodings are also <em>re-computed inside each fold of the stacking OOF loop</em>. This means no leakage at either stage: not in the feature creation step, and not in the stacking step.</p></div>
+
+<h2 id="feature-matrix-after-cleanup">Feature Matrix After Cleanup</h2>
+
+<pre><code>Features: 71  (num=56, cat=15)
+postal / block in cat_cols: False / False   ← successfully dropped
+block_num, postal_sector_median_price, flat_model_median_price: ✓ numeric</code></pre>
+
+<h2 id="randomizedsearchcv-xgboost-40-trials">RandomizedSearchCV — XGBoost (40 trials)</h2>
+
+<p>The key additions vs v8's grid: <code>n_estimators</code> extended to 2000, explicit <code>reg_alpha</code> and <code>reg_lambda</code> ranges added, and <code>colsample_bytree</code> includes 0.4 (sometimes beneficial with many features).</p>
+
+<pre><code>param_dist_xgb = {
+    'model__n_estimators'     : [500, 800, 1000, 1500, 2000],
+    'model__max_depth'        : [4, 5, 6, 7, 8, 9],
+    'model__learning_rate'    : [0.01, 0.03, 0.05, 0.07, 0.1],
+    'model__subsample'        : [0.6, 0.7, 0.8, 0.9],
+    'model__colsample_bytree' : [0.4, 0.5, 0.6, 0.7, 0.8],
+    'model__min_child_weight' : [1, 3, 5, 7, 10],
+    'model__reg_alpha'        : [0, 0.01, 0.1, 1.0],
+    'model__reg_lambda'       : [0.5, 1.0, 1.5, 2.0, 3.0],
+}</code></pre>
+
+<table>
+  <thead><tr><th>Parameter</th><th>Winning Value</th></tr></thead>
+  <tbody>
+    <tr><td><code>n_estimators</code></td><td>2000</td></tr>
+    <tr><td><code>max_depth</code></td><td>7</td></tr>
+    <tr><td><code>learning_rate</code></td><td>0.05</td></tr>
+    <tr><td><code>subsample</code></td><td>0.9</td></tr>
+    <tr><td><code>colsample_bytree</code></td><td>0.4</td></tr>
+    <tr><td><code>min_child_weight</code></td><td>7</td></tr>
+    <tr><td><code>reg_alpha</code></td><td>0.01</td></tr>
+    <tr><td><code>reg_lambda</code></td><td>1.5</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Best CV RMSE: $22,611 &rarr; Val RMSE: $21,730</strong></p>
+
+<h2 id="randomizedsearchcv-lightgbm-40-trials">RandomizedSearchCV — LightGBM (40 trials)</h2>
+
+<p>LightGBM grows trees <strong>leaf-wise</strong> rather than level-wise. The key capacity control is <code>num_leaves</code>, not just <code>max_depth</code>. The grid extends <code>num_leaves</code> to 300 (vs a typical default of 31–127).</p>
+
+<table>
+  <thead><tr><th>Parameter</th><th>Winning Value</th></tr></thead>
+  <tbody>
+    <tr><td><code>n_estimators</code></td><td>1000</td></tr>
+    <tr><td><code>max_depth</code></td><td>12</td></tr>
+    <tr><td><code>num_leaves</code></td><td>300</td></tr>
+    <tr><td><code>learning_rate</code></td><td>0.03</td></tr>
+    <tr><td><code>subsample</code></td><td>0.8</td></tr>
+    <tr><td><code>colsample_bytree</code></td><td>0.5</td></tr>
+    <tr><td><code>min_child_samples</code></td><td>20</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Best CV RMSE: $22,529 &rarr; Val RMSE: $21,541</strong> — best single model in the stack.</p>
+
+<h2 id="randomizedsearchcv-extra-trees-15-trials">RandomizedSearchCV — Extra Trees (15 trials)</h2>
+
+<p>ExtraTrees has no learning rate, so the search space is simpler. The critical lesson: <strong>never include <code>max_depth=None</code></strong> in the grid. Fully-grown trees on 150,634 rows can take 30+ minutes per fit. Capping at <code>max_depth=30</code> brought ET search time to ~5 minutes.</p>
+
+<pre><code>param_dist_et = {
+    'model__max_depth': [15, 20, 30],    # None removed — extremely slow
+    ...
+}</code></pre>
+
+<p><strong>ET CV RMSE: $24,460 &rarr; Val RMSE: $23,238</strong> (weakest model, but still contributes diversity)</p>
+
+<h2 id="5-fold-oof-generation-3-models">5-Fold OOF Generation (3 Models)</h2>
+
+<p>The OOF loop runs all 3 models on the same 5 folds. Inside each fold, the three group encodings are recomputed fresh from fold-train rows — preventing leakage at the stacking stage.</p>
+
+<table>
+  <thead><tr><th>Model</th><th>OOF RMSE (individual)</th></tr></thead>
+  <tbody>
+    <tr><td>XGBoost</td><td>~$21,730</td></tr>
+    <tr><td>LightGBM</td><td>~$21,541</td></tr>
+    <tr><td>ExtraTrees</td><td>~$23,238</td></tr>
+    <tr><td>Equal-weight blend</td><td>~$21,757</td></tr>
+  </tbody>
+</table>
+
+<h2 id="ridge-meta-learner">Ridge Meta-Learner</h2>
+
+<p>The Ridge meta-model learns to combine the 3 base models' OOF predictions. A sweep of regularisation strengths finds alpha=0.001. All 3 coefficients are positive — confirming each model contributes unique, non-redundant signal:</p>
+
+<table>
+  <thead><tr><th>Model</th><th>Coefficient</th></tr></thead>
+  <tbody>
+    <tr><td>XGBoost</td><td>0.3854</td></tr>
+    <tr><td>LightGBM</td><td>0.4824</td></tr>
+    <tr><td>ExtraTrees</td><td>0.1347</td></tr>
+  </tbody>
+</table>
+
+<div class="highlight"><p><strong>Ridge meta-train OOF RMSE: $21,627</strong> — best OOF in the project so far.</p></div>
+
+<h2 id="results-summary">Results Summary</h2>
+
+<table>
+  <thead><tr><th>Version</th><th>Model</th><th>OOF RMSE</th><th>Kaggle RMSE</th></tr></thead>
+  <tbody>
+    <tr><td>v6</td><td>Log blend + OOF encoding</td><td>$21,818</td><td>$22,124</td></tr>
+    <tr><td>v7</td><td>Stack XGB+LGBM (Ridge)</td><td>$21,841</td><td>$21,906</td></tr>
+    <tr><td>v8</td><td>Stack XGB+LGBM+ET (Ridge)</td><td>—</td><td>$21,805</td></tr>
+    <tr><td><strong>v9</strong></td><td><strong>Wider grid + richer encoding</strong></td><td><strong>$21,627</strong></td><td><strong>$21,756</strong></td></tr>
+  </tbody>
+</table>
+
+<h2 id="key-takeaways">Key Takeaways</h2>
+
+<ul>
+  <li>Replacing 9,125-level ordinal-encoded <code>postal</code> with <code>postal_sector_median_price</code> (OOF median of 598 sectors) gave the model a real geographic price signal — the single biggest change in v9.</li>
+  <li>OOF target encoding must be recomputed <em>inside</em> the stacking OOF loop, not precomputed once — otherwise the encoded features leak the target into the validation fold.</li>
+  <li>LightGBM with <code>num_leaves=300</code> and <code>learning_rate=0.03</code> was the strongest individual model at val RMSE $21,541; the wider search grid was worth the extra compute.</li>
+  <li>ExtraTrees contributed a small but genuine signal (coefficient 0.13) — stacking still outperformed the best single model.</li>
+  <li>Capping <code>max_depth</code> for ExtraTrees (removing <code>None</code>) is essential — unbounded trees on 150K rows can run for 30+ minutes.</li>
+  <li>The OOF→Kaggle gap widened slightly (+$129 vs near-zero in v8), suggesting mild overfitting in <code>postal_sector_median_price</code> for rare sectors with few training rows.</li>
+</ul>
+
+<hr>
+<p style="color:#9ca3af;font-size:0.85em;text-align:center;">
+  <span class="badge badge-orange">v9</span>
+  <span class="badge">08_v9_stack.ipynb</span>
+  Team 3 &bull; NTU SCTP Module 3 &bull; 2026-04-24
+</p>
+
+</body>
+</html>

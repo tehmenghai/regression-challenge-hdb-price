@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Baseline Model — Full Explanation</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 24px 80px; color: #1a1a1a; line-height: 1.7; background: #fafafa; }
+  h1 { font-size: 2rem; color: #1a1a1a; border-bottom: 3px solid #2563eb; padding-bottom: 12px; }
+  h2 { font-size: 1.4rem; color: #2563eb; margin-top: 48px; border-left: 4px solid #2563eb; padding-left: 12px; }
+  h3 { font-size: 1.1rem; color: #374151; margin-top: 28px; }
+  h4 { font-size: 1rem; color: #6b7280; margin-top: 20px; }
+  code { background: #1e293b; color: #e2e8f0; padding: 2px 7px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.88em; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 8px; overflow-x: auto; font-size: 0.88em; line-height: 1.6; margin: 16px 0; }
+  pre code { background: none; padding: 0; color: inherit; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.93em; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  th { background: #2563eb; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  blockquote { background: #eff6ff; border-left: 4px solid #2563eb; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #1e40af; }
+  blockquote p { margin: 0; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 6px 0; }
+</style>
+<script src="nav.js"></script>
+</head>
+<body>
+<h1>Baseline Model — Full Explanation in Layman Terms</h1>
+<hr />
+<h2 id="the-big-picture">The Big Picture</h2>
+<p>Before we explain the code, understand what we are trying to do:</p>
+<blockquote>
+<p><strong>We want to teach a computer to predict HDB resale prices.</strong></p>
+<p>We show it 150,000 past transactions (with actual prices).
+It learns the patterns.
+Then we ask it to predict prices for 16,737 new transactions it has never seen.</p>
+</blockquote>
+<p>Think of it like teaching a new property agent:
+- You show them 150,000 past deals → they learn what affects price
+- You then ask them to estimate the price of a new flat → they give you a number based on what they learned</p>
+<hr />
+<h2 id="step-1-import-libraries">Step 1 — Import Libraries</h2>
+<pre><code class="language-python">import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings('ignore')
+</code></pre>
+<h3>What is a library?</h3>
+<p>A library is a <strong>toolbox</strong> someone else built for you. Instead of building a hammer from scratch, you just open the toolbox and use it.</p>
+<table>
+<thead>
+<tr>
+<th>Library</th>
+<th>What it does</th>
+<th>Real world analogy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pandas</code></td>
+<td>Handles tables of data (like Excel)</td>
+<td>Excel for Python</td>
+</tr>
+<tr>
+<td><code>numpy</code></td>
+<td>Does fast maths on large numbers</td>
+<td>A scientific calculator</td>
+</tr>
+<tr>
+<td><code>matplotlib</code></td>
+<td>Draws charts and graphs</td>
+<td>Microsoft Paint for data</td>
+</tr>
+<tr>
+<td><code>warnings</code></td>
+<td>Hides annoying warning messages</td>
+<td>Turning off notifications</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<pre><code class="language-python">from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import Ridge
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split, cross_val_score, KFold
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+</code></pre>
+<p><code>sklearn</code> (scikit-learn) is the main machine learning toolbox in Python. We are importing specific tools from it:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Pipeline</code></td>
+<td>Chains multiple steps together so they run in order automatically</td>
+</tr>
+<tr>
+<td><code>ColumnTransformer</code></td>
+<td>Applies different processing to different columns</td>
+</tr>
+<tr>
+<td><code>StandardScaler</code></td>
+<td>Rescales numbers so they are all on the same scale</td>
+</tr>
+<tr>
+<td><code>OrdinalEncoder</code></td>
+<td>Converts text categories into numbers</td>
+</tr>
+<tr>
+<td><code>SimpleImputer</code></td>
+<td>Fills in missing values</td>
+</tr>
+<tr>
+<td><code>Ridge</code></td>
+<td>A linear regression model</td>
+</tr>
+<tr>
+<td><code>RandomForestRegressor</code></td>
+<td>A tree-based model (our main model)</td>
+</tr>
+<tr>
+<td><code>train_test_split</code></td>
+<td>Splits data into training and validation sets</td>
+</tr>
+<tr>
+<td><code>cross_val_score</code></td>
+<td>Tests model reliability across multiple splits</td>
+</tr>
+<tr>
+<td><code>KFold</code></td>
+<td>Defines how to split data for cross-validation</td>
+</tr>
+<tr>
+<td><code>mean_squared_error</code></td>
+<td>Measures how wrong predictions are (squared)</td>
+</tr>
+<tr>
+<td><code>mean_absolute_error</code></td>
+<td>Measures average dollar error</td>
+</tr>
+<tr>
+<td><code>r2_score</code></td>
+<td>Measures how much of price variation the model explains</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="step-2-load-data">Step 2 — Load Data</h2>
+<pre><code class="language-python">train = pd.read_csv('../../data/raw/train.csv', low_memory=False)
+test  = pd.read_csv('../../data/raw/test.csv',  low_memory=False)
+</code></pre>
+<h3>Breaking it down</h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pd.read_csv(...)</code></td>
+<td>Open a CSV file and load it into a table (DataFrame)</td>
+</tr>
+<tr>
+<td><code>'../../data/raw/train.csv'</code></td>
+<td>File path — go up 2 folders, then into data/raw/</td>
+</tr>
+<tr>
+<td><code>low_memory=False</code></td>
+<td>Read the entire file at once — prevents dtype warning errors</td>
+</tr>
+</tbody>
+</table>
+<h3>Result</h3>
+<pre><code>train = a table with 150,634 rows and 75 columns
+test  = a table with  16,737 rows and 74 columns (no resale_price)
+</code></pre>
+<hr />
+<h2 id="step-3-drop-redundant-columns">Step 3 — Drop Redundant Columns</h2>
+<pre><code class="language-python">DROP_COLS = [
+    'floor_area_sqft',   # duplicate of floor_area_sqm
+    'lower', 'upper', 'mid',  # duplicate of mid_storey
+    'full_flat_type',    # duplicate of flat_type + flat_model
+    'address',           # duplicate of block + street_name
+    'Tranc_YearMonth',   # already split into Tranc_Year + Tranc_Month
+]
+
+train = train.drop(columns=[c for c in DROP_COLS if c in train.columns])
+test  = test.drop(columns=[c for c in DROP_COLS if c in test.columns])
+</code></pre>
+<h3>Why drop them?</h3>
+<p>These columns contain information that already exists in other columns.
+Keeping duplicates confuses the model — it sees the same information twice and thinks it is twice as important.</p>
+<p>Example:</p>
+<pre><code>floor_area_sqm  = 90        ← keep this
+floor_area_sqft = 968.76    ← drop this (it's just 90 × 10.764)
+</code></pre>
+<h3>The code <code>[c for c in DROP_COLS if c in train.columns]</code></h3>
+<p>This is called a <strong>list comprehension</strong> — a short way to write a loop.</p>
+<p>Long version (same result):</p>
+<pre><code class="language-python">cols_to_drop = []
+for c in DROP_COLS:
+    if c in train.columns:   # only drop if the column actually exists
+        cols_to_drop.append(c)
+train = train.drop(columns=cols_to_drop)
+</code></pre>
+<p>The <code>if c in train.columns</code> check is a safety net — it prevents errors if a column does not exist.</p>
+<hr />
+<h2 id="step-4-fill-missing-values">Step 4 — Fill Missing Values</h2>
+<pre><code class="language-python">fill_zero_cols = ['Hawker_Within_500m', 'Mall_Within_500m', 'Hawker_Within_1km',
+                  'Mall_Within_1km', 'Hawker_Within_2km', 'Mall_Within_2km']
+
+for col in fill_zero_cols:
+    train[col] = train[col].fillna(0)
+    test[col]  = test[col].fillna(0)
+</code></pre>
+<h3>What is <code>.fillna(0)</code>?</h3>
+<p>It finds every empty (NaN) cell in that column and replaces it with 0.</p>
+<pre><code>Before fillna:          After fillna(0):
+Hawker_Within_500m      Hawker_Within_500m
+NaN          ───→       0
+NaN          ───→       0
+1.0                     1.0
+NaN          ───→       0
+</code></pre>
+<h3>Why 0?</h3>
+<p>From our EDA validation (ID 88392), we confirmed:
+- NaN in <code>Hawker_Within_500m</code> always means the nearest hawker is &gt;500m away
+- So the count of hawkers within 500m is genuinely <strong>zero</strong>, not unknown</p>
+<hr />
+<h2 id="step-5-separate-features-and-target">Step 5 — Separate Features and Target</h2>
+<pre><code class="language-python">X = train.drop(columns=['id', 'resale_price'])   # features (inputs)
+y = train['resale_price']                          # target (answer)
+X_test = test.drop(columns=['id'])                 # test features
+</code></pre>
+<h3>The analogy</h3>
+<p>Think of a student doing an exam:</p>
+<pre><code>X = the exam questions    (floor area, town, storey, flat type...)
+y = the answer key        (actual resale price)
+
+X_test = a new exam with no answer key (this is what we predict)
+</code></pre>
+<p>The model studies <code>X</code> paired with <code>y</code> to learn the relationship, then answers <code>X_test</code> on its own.</p>
+<hr />
+<h2 id="step-6-identify-column-types">Step 6 — Identify Column Types</h2>
+<pre><code class="language-python">cat_cols = X.select_dtypes(include='object').columns.tolist()
+num_cols = X.select_dtypes(include=np.number).columns.tolist()
+</code></pre>
+<h3>Why do we separate them?</h3>
+<p>Numbers and text need <strong>different types of processing</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Example columns</th>
+<th>Problem</th>
+<th>Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Numerical</td>
+<td><code>floor_area_sqm</code>, <code>mid_storey</code></td>
+<td>Different scales (90 sqm vs 632m distance)</td>
+<td>Rescale to same range</td>
+</tr>
+<tr>
+<td>Categorical (text)</td>
+<td><code>town</code>, <code>flat_type</code>, <code>flat_model</code></td>
+<td>Models only understand numbers, not text</td>
+<td>Convert text → numbers</td>
+</tr>
+</tbody>
+</table>
+<h3><code>select_dtypes(include='object')</code></h3>
+<p><code>object</code> is pandas' way of saying "text columns". This line finds all text columns automatically.</p>
+<hr />
+<h2 id="step-7-train-validation-split">Step 7 — Train / Validation Split</h2>
+<pre><code class="language-python">X_train, X_val, y_train, y_val = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+</code></pre>
+<h3>What is this doing?</h3>
+<p>Splitting 150,634 rows into two groups:</p>
+<pre><code>150,634 rows total
+│
+├── 120,507 rows → X_train + y_train  (model learns from these)
+└──  30,127 rows → X_val   + y_val   (we test the model on these)
+</code></pre>
+<h3>Parameters explained</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>X, y</code></td>
+<td>Our features and target</td>
+<td>What to split</td>
+</tr>
+<tr>
+<td><code>test_size=0.2</code></td>
+<td>0.2 = 20%</td>
+<td>Keep 20% aside for validation</td>
+</tr>
+<tr>
+<td><code>random_state=42</code></td>
+<td>Any fixed number</td>
+<td>Makes the random split reproducible — same split every time you run</td>
+</tr>
+</tbody>
+</table>
+<h3>Why 42?</h3>
+<p>No special reason — it is a convention in data science (from The Hitchhiker's Guide to the Galaxy). Any fixed number works. The important thing is it is <strong>fixed</strong> so results are reproducible.</p>
+<h3>Why do we need a validation set?</h3>
+<p>We cannot use <code>test.csv</code> to check our model (no real prices). So we hide 20% of training data from the model, train on the other 80%, then check accuracy on the hidden 20%.</p>
+<pre><code>train.csv (150K rows)
+│
+├── 80% → model trains here    (model SEES these)
+│
+└── 20% → validation set       (model NEVER sees these during training)
+                                 ↓
+                         We compare predictions here
+                         to check model accuracy
+</code></pre>
+<hr />
+<h2 id="step-8-preprocessing-pipelines">Step 8 — Preprocessing Pipelines</h2>
+<h3>What is a Pipeline?</h3>
+<p>A Pipeline is a <strong>production line</strong> — it processes data step by step in a fixed order.</p>
+<p>Like a car assembly line:</p>
+<pre><code>Raw steel → Cut → Weld → Paint → Finish
+Raw data  → Impute → Scale → (model ready)
+</code></pre>
+<pre><code class="language-python">num_pipeline = Pipeline([
+    ('imputer', SimpleImputer(strategy='median')),
+    ('scaler',  StandardScaler())
+])
+</code></pre>
+<h4>Step 1: SimpleImputer</h4>
+<pre><code class="language-python">SimpleImputer(strategy='median')
+</code></pre>
+<p>Fills remaining missing values in numerical columns.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strategy='median'</code></td>
+<td>Use the median</td>
+<td>Fill blanks with the middle value of that column</td>
+</tr>
+</tbody>
+</table>
+<p>Example:</p>
+<pre><code>mrt_nearest_distance: [200, 500, NaN, 800, 300]
+median = 400
+After impute:         [200, 500, 400, 800, 300]
+</code></pre>
+<p>Why median and not mean?
+- Mean is pulled by outliers (one flat 5km from MRT skews the average)
+- Median is the middle value — more robust</p>
+<h4>Step 2: StandardScaler</h4>
+<pre><code class="language-python">StandardScaler()
+</code></pre>
+<p>Rescales all numbers to the same range (mean=0, std=1).</p>
+<h3>Why do we need to scale?</h3>
+<p>Imagine the model is comparing:</p>
+<pre><code>floor_area_sqm    = 90       (range: 30–300)
+mrt_distance      = 632      (range: 50–5000)
+Tranc_Year        = 2019     (range: 2012–2022)
+</code></pre>
+<p>Without scaling, <code>Tranc_Year</code> (2019) looks huge compared to <code>floor_area_sqm</code> (90).
+The model might think year is more important just because the number is bigger — which is wrong.</p>
+<p>After StandardScaler:</p>
+<pre><code>floor_area_sqm    = 0.3      (all on same scale)
+mrt_distance      = -0.1     (all centred around 0)
+Tranc_Year        = 0.8      (model can compare fairly)
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> Tree models (Random Forest, XGBoost) do NOT actually need scaling. But it is harmless, and it is required for Ridge regression. We include it so both models use the same pipeline.</p>
+</blockquote>
+<hr />
+<pre><code class="language-python">cat_pipeline = Pipeline([
+    ('imputer', SimpleImputer(strategy='most_frequent')),
+    ('encoder', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1))
+])
+</code></pre>
+<h4>Step 1: SimpleImputer for text</h4>
+<pre><code class="language-python">SimpleImputer(strategy='most_frequent')
+</code></pre>
+<p>Fills missing text values with the <strong>most common value</strong> in that column.</p>
+<p>Example:</p>
+<pre><code>flat_model: ['Model A', NaN, 'Improved', 'Model A', NaN]
+most_frequent = 'Model A'
+After impute: ['Model A', 'Model A', 'Improved', 'Model A', 'Model A']
+</code></pre>
+<h4>Step 2: OrdinalEncoder</h4>
+<pre><code class="language-python">OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+</code></pre>
+<p>Converts text categories into numbers — models only understand numbers.</p>
+<p>Example:</p>
+<pre><code>flat_type (before):          flat_type (after):
+'1 ROOM'          ───→       0
+'2 ROOM'          ───→       1
+'3 ROOM'          ───→       2
+'4 ROOM'          ───→       3
+'5 ROOM'          ───→       4
+'EXECUTIVE'       ───→       5
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>handle_unknown='use_encoded_value'</code></td>
+<td>If test data has a new category not seen in training, do not crash</td>
+</tr>
+<tr>
+<td><code>unknown_value=-1</code></td>
+<td>Assign -1 to any unknown category</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<pre><code class="language-python">preprocessor = ColumnTransformer([
+    ('num', num_pipeline, num_cols),
+    ('cat', cat_pipeline, cat_cols)
+])
+</code></pre>
+<h3>What is ColumnTransformer?</h3>
+<p>It applies <strong>different pipelines to different columns</strong> at the same time.</p>
+<pre><code>All columns
+│
+├── Numerical columns → num_pipeline (impute with median → scale)
+└── Categorical columns → cat_pipeline (impute with mode → encode)
+</code></pre>
+<p>Think of it like a passport control with two lanes:</p>
+<pre><code>Passengers (data)
+│
+├── Citizens (numerical) ──→ Fast lane (StandardScaler)
+└── Foreigners (categorical) → Processing lane (OrdinalEncoder)
+</code></pre>
+<hr />
+<h2 id="step-9-model-1-ridge-regression">Step 9 — Model 1: Ridge Regression</h2>
+<pre><code class="language-python">ridge_pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('model', Ridge(alpha=10))
+])
+
+ridge_pipeline.fit(X_train, y_train)
+ridge_pred = ridge_pipeline.predict(X_val)
+</code></pre>
+<h3>What is Ridge Regression?</h3>
+<p>Ridge is a <strong>linear model</strong> — it draws a straight line through the data.</p>
+<p>Simple example (one feature):</p>
+<pre><code>resale_price = (floor_area × 3,500) + (storey × 2,000) + 200,000
+</code></pre>
+<p>It finds the best multipliers (3,500, 2,000, 200,000) to fit the training data.</p>
+<h3><code>alpha=10</code></h3>
+<p>Alpha controls how much the model is penalised for using large multipliers.
+- High alpha → simpler model, less risk of overfitting
+- Low alpha → more complex, risks overfitting
+- 10 is a reasonable starting default</p>
+<h3><code>.fit(X_train, y_train)</code></h3>
+<p>This is where the <strong>learning happens</strong>.
+The model looks at all 120,507 training rows and figures out the best multipliers.</p>
+<h3><code>.predict(X_val)</code></h3>
+<p>The model uses what it learned to estimate prices for the 30,127 validation rows — rows it has never seen.</p>
+<hr />
+<h2 id="step-10-model-2-random-forest">Step 10 — Model 2: Random Forest</h2>
+<pre><code class="language-python">rf_pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('model', RandomForestRegressor(
+        n_estimators=100,
+        max_depth=15,
+        min_samples_leaf=5,
+        n_jobs=-1,
+        random_state=42
+    ))
+])
+</code></pre>
+<h3>What is a Random Forest?</h3>
+<p>A Random Forest is a collection of <strong>decision trees</strong> — each tree votes, and the average vote is the final prediction.</p>
+<h3>What is a Decision Tree?</h3>
+<p>A tree that asks yes/no questions to narrow down the price:</p>
+<pre><code>Is floor_area_sqm &gt; 100?
+├── YES → Is town == 'BISHAN'?
+│         ├── YES → Predict $650,000
+│         └── NO  → Is mid_storey &gt; 15?
+│                   ├── YES → Predict $580,000
+│                   └── NO  → Predict $520,000
+└── NO  → Is flat_type == '3 ROOM'?
+          ├── YES → Predict $380,000
+          └── NO  → Predict $290,000
+</code></pre>
+<h3>Why a "Forest" (many trees)?</h3>
+<p>One tree can be wrong. 100 trees voting together are much more accurate.</p>
+<p>Like asking 100 property agents for a price estimate and averaging their answers — more reliable than asking just one.</p>
+<h3>Parameters explained</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>n_estimators=100</code></td>
+<td>100 trees</td>
+<td>Build 100 different decision trees and average their predictions</td>
+</tr>
+<tr>
+<td><code>max_depth=15</code></td>
+<td>Max 15 levels deep</td>
+<td>Limits tree complexity — prevents overfitting</td>
+</tr>
+<tr>
+<td><code>min_samples_leaf=5</code></td>
+<td>Min 5 rows per leaf</td>
+<td>A tree cannot split if fewer than 5 rows remain — prevents overfitting</td>
+</tr>
+<tr>
+<td><code>n_jobs=-1</code></td>
+<td>Use all CPU cores</td>
+<td>Train faster by using all available processors</td>
+</tr>
+<tr>
+<td><code>random_state=42</code></td>
+<td>Fixed seed</td>
+<td>Same forest every time you run the code</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="step-11-evaluation-metrics">Step 11 — Evaluation Metrics</h2>
+<pre><code class="language-python">def evaluate(name, y_true, y_pred):
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    mae  = mean_absolute_error(y_true, y_pred)
+    r2   = r2_score(y_true, y_pred)
+</code></pre>
+<h3>RMSE — Root Mean Squared Error</h3>
+<pre><code>Error for each flat = Actual Price − Predicted Price
+RMSE = √(average of all errors²)
+</code></pre>
+<p>Example:</p>
+<pre><code>Flat 1: Actual $500K, Predicted $480K → Error = $20K  → Squared = 400,000,000
+Flat 2: Actual $400K, Predicted $450K → Error = $50K  → Squared = 2,500,000,000
+Flat 3: Actual $600K, Predicted $590K → Error = $10K  → Squared = 100,000,000
+
+Average squared error = 1,000,000,000
+RMSE = √1,000,000,000 = $31,623
+</code></pre>
+<p><strong>RMSE punishes big errors more</strong> (because of squaring). A $50K error hurts 6.25× more than a $20K error.</p>
+<p>Our RF RMSE = <strong>$25,871</strong> → on average, predictions are off by ~$26K</p>
+<h3>MAE — Mean Absolute Error</h3>
+<pre><code>MAE = average of |Actual − Predicted| across all flats
+</code></pre>
+<p>Simpler than RMSE — just the average dollar error, no squaring.</p>
+<p>Our RF MAE = <strong>$18,950</strong> → the typical prediction is off by ~$19K</p>
+<h3>R² — R-squared</h3>
+<p>Measures how much of the price variation the model explains.</p>
+<pre><code>R² = 0.00 → model explains nothing (just predicts the average price for every flat)
+R² = 0.50 → model explains half the variation
+R² = 1.00 → model predicts perfectly
+</code></pre>
+<p>Our RF R² = <strong>0.9672</strong> → model explains 96.7% of why prices differ between flats</p>
+<hr />
+<h2 id="step-12-cross-validation">Step 12 — Cross-Validation</h2>
+<pre><code class="language-python">kf = KFold(n_splits=5, shuffle=True, random_state=42)
+
+cv_scores = cross_val_score(
+    rf_pipeline, X, y,
+    cv=kf,
+    scoring='neg_root_mean_squared_error',
+    n_jobs=-1
+)
+</code></pre>
+<h3>Why not just use the single validation score?</h3>
+<p>The single val split could get <strong>lucky or unlucky</strong> depending on which rows end up in the 20%.</p>
+<p>Cross-validation runs the test 5 times with different splits:</p>
+<pre><code>Run 1: Train on folds 2,3,4,5 → Test on fold 1 → RMSE = $25,100
+Run 2: Train on folds 1,3,4,5 → Test on fold 2 → RMSE = $26,800
+Run 3: Train on folds 1,2,4,5 → Test on fold 3 → RMSE = $25,900
+Run 4: Train on folds 1,2,3,5 → Test on fold 4 → RMSE = $27,200
+Run 5: Train on folds 1,2,3,4 → Test on fold 5 → RMSE = $26,900
+
+Average = $26,389 ← much more reliable than a single run
+</code></pre>
+<h3>Parameters explained</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>n_splits=5</code></td>
+<td>5 folds</td>
+<td>Split data into 5 equal parts</td>
+</tr>
+<tr>
+<td><code>shuffle=True</code></td>
+<td>Shuffle rows first</td>
+<td>Prevents time-ordered bias</td>
+</tr>
+<tr>
+<td><code>scoring='neg_root_mean_squared_error'</code></td>
+<td>Negative RMSE</td>
+<td>sklearn returns negative so higher = better (convention)</td>
+</tr>
+<tr>
+<td><code>n_jobs=-1</code></td>
+<td>All CPU cores</td>
+<td>Run folds in parallel — faster</td>
+</tr>
+</tbody>
+</table>
+<h3>Why <code>neg_root_mean_squared_error</code>?</h3>
+<p>sklearn always maximises the score. Since lower RMSE = better, it uses negative RMSE so the best score is the "highest" (least negative) number.</p>
+<pre><code class="language-python">cv_rmse = -cv_scores   # flip the sign back to positive
+</code></pre>
+<p>Our CV RMSE = <strong>$26,389 ± $320</strong> → consistent across all 5 folds, model is stable</p>
+<hr />
+<h2 id="step-13-generate-submission">Step 13 — Generate Submission</h2>
+<pre><code class="language-python"># Retrain on ALL training data (not just 80%)
+rf_pipeline.fit(X, y)
+
+test_pred = rf_pipeline.predict(X_test)
+
+submission = pd.DataFrame({
+    'id': test['id'],
+    'resale_price': test_pred.round(0)
+})
+
+submission.to_csv('../../outputs/submissions/sub_v1_rf_baseline.csv', index=False)
+</code></pre>
+<h3>Why retrain on ALL data before submitting?</h3>
+<p>During evaluation we only used 80% for training (to keep 20% for validation).
+But for the final submission, we want the model to learn from <strong>as much data as possible</strong>.
+So we retrain on the full 150,634 rows before predicting the 16,737 test rows.</p>
+<h3><code>.round(0)</code></h3>
+<p>Rounds predictions to the nearest dollar (no decimals).</p>
+<pre><code>477,234.67  ───→  477,235.0
+</code></pre>
+<h3><code>index=False</code></h3>
+<p>Do not write the row numbers (0, 1, 2...) into the CSV — Kaggle only wants <code>id</code> and <code>resale_price</code>.</p>
+<hr />
+<h2 id="summary-the-full-pipeline-at-a-glance">Summary — The Full Pipeline at a Glance</h2>
+<pre><code>Raw train.csv (150K rows)
+│
+├─ Drop redundant columns
+├─ Fill missing values with 0
+├─ Split into X (features) and y (target)
+├─ Split into 80% train / 20% validation
+│
+├─ Preprocessing pipeline:
+│   ├─ Numerical columns → fill blanks with median → rescale
+│   └─ Categorical columns → fill blanks with mode → encode as numbers
+│
+├─ Ridge Regression → RMSE $58,387  (linear, our floor)
+├─ Random Forest   → RMSE $25,871  (tree, our baseline)
+├─ Cross-validation → RMSE $26,389 ± $320  (reliable estimate)
+│
+└─ Retrain on full data → predict test.csv → save submission CSV
+
+Result: sub_v1_rf_baseline.csv (16,737 predictions)
+</code></pre>
+<hr />
+<h2 id="whats-next">What's Next</h2>
+<p>Our baseline RMSE is <strong>$25,871</strong>. The goal in the next notebooks is to beat this number through:</p>
+<ol>
+<li><strong>Feature engineering</strong> — add <code>dist_to_cbd</code>, <code>remaining_lease</code>, better encode <code>town</code></li>
+<li><strong>Log-transform target</strong> — reduce impact of expensive outlier flats</li>
+<li><strong>Better model</strong> — XGBoost / LightGBM (faster and more powerful than Random Forest)</li>
+<li><strong>Hyperparameter tuning</strong> — find the best settings for the model</li>
+</ol>
+<p>→ <code>03_feature_engineering.ipynb</code></p>
+</body>
+</html>

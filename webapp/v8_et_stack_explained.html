@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>v8 Extra Trees Stack — Full Explanation</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 24px 80px; color: #1a1a1a; line-height: 1.7; background: #fafafa; }
+  h1 { font-size: 2rem; color: #1a1a1a; border-bottom: 3px solid #0369a1; padding-bottom: 12px; }
+  h2 { font-size: 1.4rem; color: #0369a1; margin-top: 48px; border-left: 4px solid #0369a1; padding-left: 12px; }
+  h3 { font-size: 1.1rem; color: #374151; margin-top: 28px; }
+  h4 { font-size: 1rem; color: #6b7280; margin-top: 20px; }
+  code { background: #1e293b; color: #e2e8f0; padding: 2px 7px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.88em; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 8px; overflow-x: auto; font-size: 0.88em; line-height: 1.6; margin: 16px 0; }
+  pre code { background: none; padding: 0; color: inherit; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.93em; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  th { background: #0369a1; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  blockquote { background: #eff6ff; border-left: 4px solid #0369a1; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #1e3a5f; }
+  blockquote p { margin: 0; }
+  .highlight { background: #ecfdf5; border-left: 4px solid #059669; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #065f46; }
+  .highlight p { margin: 0; }
+  .warning { background: #fffbeb; border-left: 4px solid #f59e0b; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #78350f; }
+  .warning p { margin: 0; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 6px 0; }
+  .badge { display: inline-block; background: #0369a1; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; margin-right: 6px; vertical-align: middle; font-family: 'Courier New', monospace; }
+  .badge-green { background: #059669; }
+  .badge-orange { background: #d97706; }
+  .badge-gold { background: #b45309; }
+  .score-box { background: white; border: 2px solid #0369a1; border-radius: 12px; padding: 20px 28px; margin: 24px 0; display: flex; gap: 40px; flex-wrap: wrap; }
+  .score-item { text-align: center; }
+  .score-label { font-size: 0.82em; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .score-value { font-size: 1.6rem; font-weight: 700; color: #0369a1; }
+  .score-delta { font-size: 0.88em; color: #059669; font-weight: 600; }
+  .arch-box { background: #1e293b; color: #e2e8f0; border-radius: 10px; padding: 24px 28px; margin: 24px 0; font-family: 'Courier New', monospace; font-size: 0.88em; line-height: 1.8; }
+  .arch-box .arrow { color: #38bdf8; }
+  .arch-box .label { color: #fbbf24; font-weight: 700; }
+  .arch-box .result { color: #34d399; font-weight: 700; }
+  .coef-row { display: flex; align-items: center; gap: 14px; margin: 10px 0; }
+  .coef-bar-wrap { flex: 1; background: #e5e7eb; border-radius: 4px; height: 18px; overflow: hidden; }
+  .coef-bar { height: 100%; border-radius: 4px; }
+  .coef-val { font-size: 0.9em; font-weight: 700; color: #0369a1; min-width: 60px; text-align: right; font-family: 'Courier New', monospace; }
+  .coef-name { font-size: 0.88em; color: #374151; min-width: 80px; }
+</style>
+<script src="nav.js"></script>
+</head>
+<body>
+
+<h1>v8 — Extra Trees Stack<br><small style="font-size:0.55em;color:#6b7280;">Adding a 3rd Base Model to Break the $22k Barrier</small></h1>
+
+<div class="score-box">
+  <div class="score-item">
+    <div class="score-label">v8 Kaggle RMSE</div>
+    <div class="score-value" style="color:#d97706">$21,805</div>
+    <div class="score-delta">↓ $101 vs v7 · New best</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">v7 Kaggle RMSE</div>
+    <div class="score-value" style="color:#6b7280">$21,906</div>
+    <div class="score-delta" style="color:#6b7280">previous best</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">CV OOF RMSE</div>
+    <div class="score-value" style="color:#059669">$21,708</div>
+    <div class="score-delta">CV–Kaggle gap: $97</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Gap to 1st place</div>
+    <div class="score-value">$338</div>
+    <div class="score-delta">leaderboard #2</div>
+  </div>
+</div>
+
+<div class="highlight">
+  <p><strong>The v8 idea in one sentence:</strong> We kept the v7 Ridge-on-OOF stacking framework but added a 3rd base model — Extra Trees Regressor — giving the meta-model a third independent "opinion" to blend, squeezing out another $101 in RMSE.</p>
+</div>
+
+<h2 id="1-what-was-wrong-with-v7">1. What Was Wrong With v7?</h2>
+
+<p>v7 used two base models — tuned XGBoost and tuned LightGBM — with a Ridge meta-model trained on their out-of-fold (OOF) predictions. It scored <strong>$21,906</strong> on Kaggle.</p>
+
+<p>Both XGB and LGBM are <strong>gradient boosting</strong> algorithms. They're related: they both build trees sequentially where each tree tries to correct the previous one's residuals. Because they're similar in nature, their predictions are <em>correlated</em>. The meta-model doesn't get much new signal by seeing both — they tell a similar story.</p>
+
+<blockquote>
+  <p><strong>Analogy:</strong> Ask two friends who went to the same school the same question — you'll get similar answers. Now ask someone with a completely different background, and you get a genuinely independent perspective. The more diverse the opinions, the better your final consensus.</p>
+</blockquote>
+
+<p>That's exactly what Extra Trees brings to v8.</p>
+
+<h2 id="2-what-is-extra-trees-extra-randomized-trees">2. What Is Extra Trees (Extra Randomized Trees)?</h2>
+
+<p>Extra Trees (<code>ExtraTreesRegressor</code>) is a <strong>bagging</strong> ensemble of decision trees — but with one extra twist compared to Random Forest: the split thresholds are chosen <em>completely randomly</em>.</p>
+
+<table>
+  <tr>
+    <th>Property</th>
+    <th>Random Forest</th>
+    <th>Extra Trees</th>
+  </tr>
+  <tr>
+    <td>Tree building</td>
+    <td>Bootstrap samples (with replacement)</td>
+    <td>Full training set (no bootstrap by default)</td>
+  </tr>
+  <tr>
+    <td>Feature selection at each split</td>
+    <td>Random subset of features</td>
+    <td>Same — random subset</td>
+  </tr>
+  <tr>
+    <td>Split threshold</td>
+    <td>Best threshold found by search</td>
+    <td><strong>Completely random</strong> threshold</td>
+  </tr>
+  <tr>
+    <td>Variance</td>
+    <td>Lower (bootstrap helps)</td>
+    <td>Lower still (randomness averages out)</td>
+  </tr>
+  <tr>
+    <td>Bias</td>
+    <td>Moderate</td>
+    <td>Slightly higher (random splits aren't optimal)</td>
+  </tr>
+  <tr>
+    <td>Training speed</td>
+    <td>Moderate</td>
+    <td>Fast (no split search)</td>
+  </tr>
+</table>
+
+<h3>Why Does Random Splitting Help?</h3>
+
+<p>When XGB or LGBM predicts a price, they do it through a careful sequential process — each tree focuses on the hardest remaining errors. Extra Trees predicts through many shallow, randomly-split trees and <strong>averages</strong> them.</p>
+
+<p>The result: ET makes <em>different kinds of errors</em> than XGB/LGBM. Its mistakes don't correlate with theirs. When the Ridge meta-model sees three OOF columns — XGB, LGBM, ET — the ET column provides genuinely new information.</p>
+
+<div class="warning">
+  <p><strong>Why ET alone is weaker ($23,123 val RMSE vs XGB's $21,769):</strong> Random splits are by definition not optimal. ET is intentionally "less smart" per tree — its strength is diversity and speed, not individual accuracy. It's a contributor, not a leader.</p>
+</div>
+
+<h2 id="3-the-v8-architecture">3. The v8 Architecture</h2>
+
+<div class="arch-box">
+<span class="label">Training data (5-fold CV)</span>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;│
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="arrow">→</span> XGBoost (tuned)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">→</span> xgb_oof[n_train]
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="arrow">→</span> LightGBM (tuned)&nbsp;&nbsp;&nbsp;<span class="arrow">→</span> lgbm_oof[n_train]
+&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="arrow">→</span> Extra Trees (tuned) <span class="arrow">→</span> et_oof[n_train]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="label">Ridge meta-model</span> trained on [xgb_oof, lgbm_oof, et_oof]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="label">Test predictions</span> = Ridge( xgb_test, lgbm_test, et_test )
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="result">Kaggle RMSE: $21,804.67</span>
+</div>
+
+<p>Every base model generates predictions on the <strong>training data it never saw</strong> (out-of-fold). This is critical — if we used in-fold predictions, the meta-model would learn from memorised training data, not genuine generalisation.</p>
+
+<h2 id="4-out-of-fold-oof-predictions-why-and-how">4. Out-of-Fold (OOF) Predictions — Why and How</h2>
+
+<p>OOF is the key that makes stacking honest. Here's the 5-fold process for one base model (same for all three):</p>
+
+<pre><code>for fold 1 of 5:
+    train XGB on folds 2,3,4,5  →  predict on fold 1  →  xgb_oof[fold_1_rows]
+for fold 2 of 5:
+    train XGB on folds 1,3,4,5  →  predict on fold 2  →  xgb_oof[fold_2_rows]
+... (repeat for folds 3, 4, 5)
+
+# After 5 iterations: xgb_oof covers ALL training rows
+# Each row was predicted by a model that never trained on it</code></pre>
+
+<p>We do this independently for XGB, LGBM, and ET. The result is a matrix of shape <code>(n_train, 3)</code>:</p>
+
+<table>
+  <tr>
+    <th>Row</th>
+    <th>xgb_oof</th>
+    <th>lgbm_oof</th>
+    <th>et_oof</th>
+    <th>actual price</th>
+  </tr>
+  <tr>
+    <td>0</td>
+    <td>480,200</td>
+    <td>479,850</td>
+    <td>483,400</td>
+    <td>481,000</td>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>320,100</td>
+    <td>319,600</td>
+    <td>324,200</td>
+    <td>321,500</td>
+  </tr>
+  <tr>
+    <td>…</td>
+    <td>…</td>
+    <td>…</td>
+    <td>…</td>
+    <td>…</td>
+  </tr>
+</table>
+
+<p>Ridge regression is then trained on this 3-column matrix. It learns the optimal weighted combination of the three base model predictions.</p>
+
+<h2 id="5-individual-base-model-performance">5. Individual Base Model Performance</h2>
+
+<table>
+  <tr>
+    <th>Model</th>
+    <th>Validation RMSE (5-fold avg)</th>
+    <th>Role in stack</th>
+  </tr>
+  <tr>
+    <td>XGBoost (tuned)</td>
+    <td><strong>$21,769</strong></td>
+    <td>Primary boosting signal — highest individual accuracy</td>
+  </tr>
+  <tr>
+    <td>LightGBM (tuned)</td>
+    <td><strong>$21,808</strong></td>
+    <td>Leaf-wise boosting — correlated with XGB but subtly different</td>
+  </tr>
+  <tr>
+    <td>Extra Trees (tuned)</td>
+    <td><strong>$23,123</strong></td>
+    <td>Bagging diversity — weaker alone but provides uncorrelated signal</td>
+  </tr>
+  <tr>
+    <td><strong>Ridge meta (stack)</strong></td>
+    <td><strong>$21,708</strong></td>
+    <td>Better than any individual — diversity wins</td>
+  </tr>
+</table>
+
+<div class="highlight">
+  <p><strong>Key insight:</strong> The stacked OOF RMSE ($21,708) is <em>lower than all three base models</em>. Extra Trees alone is $1,354 worse than XGB — yet adding it to the stack still improves the final prediction by $61 vs the v7 two-model stack. Diversity matters more than individual accuracy when blending.</p>
+</div>
+
+<h2 id="6-ridge-meta-model-how-it-weights-the-three-models">6. Ridge Meta-Model — How It Weights the Three Models</h2>
+
+<p>Ridge regression (linear regression with L2 regularisation) learns coefficients for each base model's OOF predictions. The coefficients tell us how much the meta-model trusts each base model:</p>
+
+<div style="margin: 24px 0;">
+  <div class="coef-row">
+    <span class="coef-name">XGBoost</span>
+    <div class="coef-bar-wrap"><div class="coef-bar" style="width:55%;background:#0369a1;"></div></div>
+    <span class="coef-val">~0.55</span>
+  </div>
+  <div class="coef-row">
+    <span class="coef-name">LightGBM</span>
+    <div class="coef-bar-wrap"><div class="coef-bar" style="width:40%;background:#0891b2;"></div></div>
+    <span class="coef-val">~0.40</span>
+  </div>
+  <div class="coef-row">
+    <span class="coef-name">Extra Trees</span>
+    <div class="coef-bar-wrap"><div class="coef-bar" style="width:10%;background:#059669;"></div></div>
+    <span class="coef-val">~0.10</span>
+  </div>
+</div>
+
+<p>The coefficients sum to approximately 1.0. XGB and LGBM dominate — as expected, since they're individually more accurate. ET gets a small but positive weight, meaning it contributes real signal even though it's weaker on its own.</p>
+
+<blockquote>
+  <p><strong>Why does Ridge (not plain linear regression) work here?</strong> XGB and LGBM predictions are highly correlated. In plain OLS, correlated predictors cause unstable coefficients (one could go very large positive, another very large negative). Ridge's L2 penalty keeps coefficients stable and appropriately sized.</p>
+</blockquote>
+
+<h2 id="7-hyperparameter-tuning-what-changed-vs-v7">7. Hyperparameter Tuning — What Changed vs v7</h2>
+
+<p>XGB and LGBM used the same tuned hyperparameters as v7. We ran <code>RandomizedSearchCV</code> (20 iterations, 5-fold CV) specifically for Extra Trees:</p>
+
+<pre><code>et_param_dist = {
+    'n_estimators':      [300, 500, 700, 1000],
+    'max_depth':         [None, 15, 20, 30],
+    'min_samples_split': [2, 5, 10],
+    'min_samples_leaf':  [1, 2, 4],
+    'max_features':      ['sqrt', 'log2', 0.5, 0.7],
+    'bootstrap':         [False, True]
+}</code></pre>
+
+<table>
+  <tr>
+    <th>Hyperparameter</th>
+    <th>What it controls</th>
+    <th>Tuned value</th>
+  </tr>
+  <tr>
+    <td><code>n_estimators</code></td>
+    <td>Number of trees in the forest</td>
+    <td>500–1000 (more = lower variance)</td>
+  </tr>
+  <tr>
+    <td><code>max_depth</code></td>
+    <td>How deep each tree grows</td>
+    <td>None (fully grown) or 20–30</td>
+  </tr>
+  <tr>
+    <td><code>max_features</code></td>
+    <td>Features considered at each split</td>
+    <td><code>sqrt</code> or 0.5 (controls diversity)</td>
+  </tr>
+  <tr>
+    <td><code>min_samples_leaf</code></td>
+    <td>Minimum samples at a leaf node</td>
+    <td>1–2 (low = deep trees)</td>
+  </tr>
+  <tr>
+    <td><code>bootstrap</code></td>
+    <td>Whether to sample training data</td>
+    <td>False (use full dataset, ET default)</td>
+  </tr>
+</table>
+
+<h2 id="8-complete-v8-pipeline-code">8. Complete v8 Pipeline Code</h2>
+
+<pre><code>from sklearn.ensemble import ExtraTreesRegressor
+from sklearn.linear_model import Ridge
+from sklearn.model_selection import KFold
+import numpy as np
+
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
+
+# Storage for OOF predictions
+xgb_oof  = np.zeros(len(X_train))
+lgbm_oof = np.zeros(len(X_train))
+et_oof   = np.zeros(len(X_train))
+
+xgb_test_preds  = []
+lgbm_test_preds = []
+et_test_preds   = []
+
+for fold, (train_idx, val_idx) in enumerate(kf.split(X_train)):
+    X_tr, X_val = X_train[train_idx], X_train[val_idx]
+    y_tr, y_val = y_train[train_idx], y_train[val_idx]
+
+    # --- XGBoost ---
+    xgb_model.fit(X_tr, y_tr)
+    xgb_oof[val_idx] = xgb_model.predict(X_val)
+    xgb_test_preds.append(xgb_model.predict(X_test))
+
+    # --- LightGBM ---
+    lgbm_model.fit(X_tr, y_tr)
+    lgbm_oof[val_idx] = lgbm_model.predict(X_val)
+    lgbm_test_preds.append(lgbm_model.predict(X_test))
+
+    # --- Extra Trees ---
+    et_model.fit(X_tr, y_tr)
+    et_oof[val_idx] = et_model.predict(X_val)
+    et_test_preds.append(et_model.predict(X_test))
+
+# Average test predictions across 5 folds
+xgb_test  = np.mean(xgb_test_preds,  axis=0)
+lgbm_test = np.mean(lgbm_test_preds, axis=0)
+et_test   = np.mean(et_test_preds,   axis=0)
+
+# Stack OOF predictions and train Ridge meta-model
+meta_train = np.column_stack([xgb_oof, lgbm_oof, et_oof])
+meta_test  = np.column_stack([xgb_test, lgbm_test, et_test])
+
+ridge = Ridge(alpha=1.0)
+ridge.fit(meta_train, y_train)
+
+final_predictions = ridge.predict(meta_test)</code></pre>
+
+<h2 id="9-why-the-stack-oof-rmse-21708-is-lower-than-kaggle-21804">9. Why the Stack OOF RMSE ($21,708) Is Lower Than Kaggle ($21,804)</h2>
+
+<p>This is a healthy, expected gap. The OOF RMSE is measured on training data — rows the base models weren't trained on within that fold, but still rows from the same distribution as the full training set.</p>
+
+<p>Kaggle data is a completely held-out test set, drawn from a possibly slightly different time period or distribution. A gap of ~$96 means our stack generalises very well — there's no sign of overfitting.</p>
+
+<table>
+  <tr>
+    <th>Version</th>
+    <th>CV/OOF RMSE</th>
+    <th>Kaggle RMSE</th>
+    <th>Gap</th>
+  </tr>
+  <tr>
+    <td>v6 (fixed blend)</td>
+    <td>$21,818</td>
+    <td>$22,124</td>
+    <td>$306</td>
+  </tr>
+  <tr>
+    <td>v7 (2-model stack)</td>
+    <td>$21,842</td>
+    <td>$21,906</td>
+    <td>$64</td>
+  </tr>
+  <tr>
+    <td><strong>v8 (3-model stack)</strong></td>
+    <td><strong>$21,708</strong></td>
+    <td><strong>$21,805</strong></td>
+    <td><strong>$97</strong></td>
+  </tr>
+</table>
+
+<p>The gap collapsed dramatically from v6 to v7 (when we switched from fixed blending to OOF stacking), and stayed low in v8. This tells us the stacking framework is correctly estimating generalisation performance.</p>
+
+<h2 id="10-summary-what-made-v8-better">10. Summary: What Made v8 Better</h2>
+
+<table>
+  <tr>
+    <th>Change from v7 → v8</th>
+    <th>Effect</th>
+  </tr>
+  <tr>
+    <td>Added ExtraTreesRegressor as 3rd base model</td>
+    <td>More diverse OOF signal for meta-model</td>
+  </tr>
+  <tr>
+    <td>Ridge now fits on 3 OOF columns instead of 2</td>
+    <td>Better weighted blend — ET adds uncorrelated info</td>
+  </tr>
+  <tr>
+    <td>ET tuned separately via RandomizedSearchCV</td>
+    <td>Optimal tree depth/features for this dataset</td>
+  </tr>
+  <tr>
+    <td>XGB + LGBM params unchanged from v7</td>
+    <td>Stable base — improvement is purely from ET addition</td>
+  </tr>
+</table>
+
+<div class="highlight">
+  <p><strong>Bottom line:</strong> v8 proves the core principle of ensemble learning — <em>diverse weak learners combined well beat a single strong learner</em>. Extra Trees is weaker than XGB alone, but its different error pattern makes the whole stack smarter. Final Kaggle RMSE: <strong>$21,804.67</strong>.</p>
+</div>
+
+<hr>
+
+<h2 id="glossary">Glossary</h2>
+
+<table>
+  <tr><th>Term</th><th>Plain-English meaning</th></tr>
+  <tr><td>OOF (Out-of-Fold)</td><td>Predictions made on the held-out validation fold — never seen during that model's training. Honest predictions.</td></tr>
+  <tr><td>Base model</td><td>First-level model that predicts the target directly (XGB, LGBM, ET in v8)</td></tr>
+  <tr><td>Meta-model</td><td>Second-level model that learns to combine base model predictions (Ridge in v8)</td></tr>
+  <tr><td>Stacking</td><td>Using one model's predictions as input features for another model</td></tr>
+  <tr><td>Bagging</td><td>Build many independent trees on random subsets; average results. Reduces variance.</td></tr>
+  <tr><td>Boosting</td><td>Build trees sequentially; each one fixes previous errors. Reduces bias.</td></tr>
+  <tr><td>Ridge (L2)</td><td>Linear regression with a penalty on large coefficients — prevents instability when inputs are correlated</td></tr>
+  <tr><td>RMSE</td><td>Root Mean Squared Error — average prediction error in the same units as the target (SGD)</td></tr>
+</table>
+
+<hr>
+<p style="color:#9ca3af;font-size:0.85em;text-align:center;">
+  <span class="badge badge-gold">v8</span>
+  <span class="badge">07_et_stack.ipynb</span>
+  Team 3 · NTU SCTP Module 3 · 2026-04-23
+</p>
+
+</body>
+</html>

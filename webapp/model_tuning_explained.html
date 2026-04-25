@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Model Tuning — Full Explanation</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 24px 80px; color: #1a1a1a; line-height: 1.7; background: #fafafa; }
+  h1 { font-size: 2rem; color: #1a1a1a; border-bottom: 3px solid #7c3aed; padding-bottom: 12px; }
+  h2 { font-size: 1.4rem; color: #7c3aed; margin-top: 48px; border-left: 4px solid #7c3aed; padding-left: 12px; }
+  h3 { font-size: 1.1rem; color: #374151; margin-top: 28px; }
+  h4 { font-size: 1rem; color: #6b7280; margin-top: 20px; }
+  code { background: #1e293b; color: #e2e8f0; padding: 2px 7px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.88em; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 8px; overflow-x: auto; font-size: 0.88em; line-height: 1.6; margin: 16px 0; }
+  pre code { background: none; padding: 0; color: inherit; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.93em; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  th { background: #7c3aed; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  blockquote { background: #f5f3ff; border-left: 4px solid #7c3aed; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #4c1d95; }
+  blockquote p { margin: 0; }
+  .highlight { background: #ecfdf5; border-left: 4px solid #059669; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #065f46; }
+  .highlight p { margin: 0; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 6px 0; }
+  .param-badge { display: inline-block; background: #7c3aed; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; margin-right: 6px; vertical-align: middle; font-family: 'Courier New', monospace; }
+</style>
+<script src="nav.js"></script>
+</head>
+<body>
+<h1>Model Tuning — Full Explanation in Layman Terms</h1>
+<hr />
+
+<h2 id="the-big-picture">The Big Picture</h2>
+<p>Our baseline Random Forest scored <strong>$25,871 RMSE</strong>. Feature engineering alone did not help RF (v2 was worse at $27,582). But with gradient boosting models and proper tuning, we can do much better.</p>
+<blockquote>
+<p><strong>Tuning is the process of finding the best "settings" (hyperparameters) for a model.</strong></p>
+<p>Think of it like tuning a radio — you tweak the dial until the signal is clearest. The model's default settings are a good starting point, but the best settings depend on your data.</p>
+</blockquote>
+<p>This notebook introduces:</p>
+<ol>
+<li><strong>XGBoost</strong> — a powerful gradient boosting model</li>
+<li><strong>LightGBM</strong> — a faster variant of gradient boosting</li>
+<li><strong>RandomizedSearchCV</strong> — automated hyperparameter search</li>
+<li><strong>Model blending</strong> — combining two models for a better prediction</li>
+</ol>
+<hr />
+
+<h2 id="why-gradient-boosting-instead-of-random-forest">Why Gradient Boosting Instead of Random Forest?</h2>
+<table>
+<thead>
+<tr><th></th><th>Random Forest</th><th>Gradient Boosting (XGB/LGBM)</th></tr>
+</thead>
+<tbody>
+<tr><td>How it builds trees</td><td>All 100 trees independently</td><td>Each tree corrects the errors of the previous tree</td></tr>
+<tr><td>Learning style</td><td>Parallel (democracy — majority vote)</td><td>Sequential (student — learn from mistakes)</td></tr>
+<tr><td>Speed</td><td>Moderate</td><td>Faster (especially LightGBM)</td></tr>
+<tr><td>Accuracy</td><td>Good baseline</td><td>Usually better with tuning</td></tr>
+<tr><td>Sensitivity to hyperparameters</td><td>Low</td><td>High — tuning matters a lot</td></tr>
+</tbody>
+</table>
+<h3>The sequential learning analogy</h3>
+<p><strong>Random Forest:</strong> 100 students each read the textbook independently → average their answers.</p>
+<p><strong>Gradient Boosting:</strong></p>
+<pre><code>Student 1 takes the exam → scores 70% → makes errors on questions 3, 7, 12
+Student 2 focuses only on questions 3, 7, 12 → corrects those errors
+Student 3 corrects whatever Student 2 still got wrong
+... repeat 1000 times
+Final answer = sum of all students' contributions</code></pre>
+<p>Each tree specifically targets where the previous model was wrong — this is called <strong>correcting residuals</strong>.</p>
+<hr />
+
+<h2 id="what-is-a-residual">What is a Residual?</h2>
+<pre><code class="language-python"># After fitting model iteration 1:
+residuals = y_train - predictions_so_far
+# Next tree fits on residuals — it learns what the current model got WRONG</code></pre>
+<p>Example:</p>
+<pre><code>Flat 1: Actual $600K, Model predicts $540K → Residual = +$60K (underpredicted)
+Flat 2: Actual $400K, Model predicts $430K → Residual = -$30K (overpredicted)
+
+Next tree focuses on: "how do I correct these $60K and $30K errors?"</code></pre>
+<p>After 1,000 iterations, the model has corrected most errors iteratively.</p>
+<hr />
+
+<h2 id="xgboost-extreme-gradient-boosting">XGBoost — Extreme Gradient Boosting</h2>
+<pre><code class="language-python">from xgboost import XGBRegressor
+
+xgb = XGBRegressor(
+    n_estimators=1000,
+    max_depth=7,
+    learning_rate=0.05,
+    subsample=0.7,
+    colsample_bytree=0.6,
+    min_child_weight=3,
+    random_state=42,
+    n_jobs=-1
+)</code></pre>
+
+<h3><span class="param-badge">n_estimators=1000</span></h3>
+<p>Number of trees (boosting rounds). More trees = more iterations of error correction = usually better accuracy. But too many trees can <strong>overfit</strong> — the model memorises training data and fails on new data. We use <code>early_stopping_rounds</code> to stop automatically when validation score stops improving:</p>
+<pre><code>Round 1:   RMSE = $45,000
+Round 100: RMSE = $28,000
+Round 500: RMSE = $23,000
+Round 750: RMSE = $22,800  ← best
+Round 900: RMSE = $22,900  ← getting worse (overfitting)
+→ Early stopping stops here and uses round 750</code></pre>
+
+<h3><span class="param-badge">max_depth=7</span></h3>
+<p>Maximum depth of each tree — how many yes/no questions it can ask.</p>
+<pre><code>depth=1 (stump):
+  Is floor_area > 100?  → done
+
+depth=3:
+  Is floor_area > 100?
+  ├── YES: Is town = 'BISHAN'?
+  │         ├── YES: Is storey > 10? → $600K / $550K
+  │         └── NO:  Is dist_to_cbd < 5? → $500K / $450K
+  └── NO:  ...
+
+depth=7: 128 possible leaf nodes — very detailed splits</code></pre>
+<p>Higher depth = more complex = can capture more patterns. Too high = overfitting. Typical sweet spot: 4–8.</p>
+
+<h3><span class="param-badge">learning_rate=0.05</span></h3>
+<p>How much each new tree contributes to the final prediction.</p>
+<pre><code>learning_rate=1.0:  Final = Tree1 + Tree2 + ... (each tree has full weight)
+learning_rate=0.1:  Final = 0.1×Tree1 + 0.1×Tree2 + ... (10% per tree)
+learning_rate=0.05: Final = 0.05×Tree1 + 0.05×Tree2 + ... (very small steps)</code></pre>
+<p><strong>Lower learning rate = smaller steps = more trees needed = usually better generalisation.</strong> This is why we use 1,000 trees with lr=0.05 rather than 100 trees with lr=0.5.</p>
+
+<h3><span class="param-badge">subsample=0.7</span></h3>
+<p>For each tree, randomly use only 70% of the training rows.</p>
+<pre><code>Tree 1: uses rows 1,2,4,5,7,8,10... (70% randomly selected)
+Tree 2: uses rows 1,3,4,6,8,9,10... (different 70%)
+Tree 3: uses rows 2,3,5,6,7,9,10... (different 70% again)</code></pre>
+<p>Prevents overfitting — each tree sees a slightly different dataset → the forest is more diverse → predictions generalise better.</p>
+
+<h3><span class="param-badge">colsample_bytree=0.6</span></h3>
+<p>For each tree, randomly use only 60% of the features (columns). Same reason as subsample — forces diversity, prevents overfitting.</p>
+
+<h3><span class="param-badge">min_child_weight=3</span></h3>
+<p>A tree cannot split a node if fewer than 3 training samples would go into that branch.</p>
+<pre><code>Without min_child_weight:
+  Is block == 'Block 123A'? → YES: 1 flat (memorising!) → overfitting
+
+With min_child_weight=3:
+  Can't split if the YES branch has fewer than 3 flats → prevents memorising rare cases</code></pre>
+<hr />
+
+<h2 id="lightgbm-light-gradient-boosting-machine">LightGBM — Light Gradient Boosting Machine</h2>
+<pre><code class="language-python">from lightgbm import LGBMRegressor
+
+lgbm = LGBMRegressor(
+    n_estimators=1200,
+    max_depth=8,
+    num_leaves=80,
+    learning_rate=0.08,
+    subsample=0.8,
+    colsample_bytree=0.7,
+    min_child_samples=20,
+    random_state=42,
+    n_jobs=-1
+)</code></pre>
+
+<h3>How is LightGBM different from XGBoost?</h3>
+<table>
+<thead>
+<tr><th></th><th>XGBoost</th><th>LightGBM</th></tr>
+</thead>
+<tbody>
+<tr><td>Tree growth</td><td><strong>Level-wise</strong> (grows layer by layer)</td><td><strong>Leaf-wise</strong> (grows the most impactful leaf first)</td></tr>
+<tr><td>Speed</td><td>Slower</td><td>3–10× faster</td></tr>
+<tr><td>Memory</td><td>More</td><td>Less</td></tr>
+<tr><td>Accuracy</td><td>Comparable</td><td>Comparable (sometimes better)</td></tr>
+</tbody>
+</table>
+
+<h3>Level-wise vs Leaf-wise tree growth</h3>
+<p><strong>XGBoost (level-wise):</strong></p>
+<pre><code>Level 1: Split root into 2 nodes
+Level 2: Split BOTH nodes into 2 children each (4 total)
+Level 3: Split ALL 4 into 2 children each (8 total)
+Grows evenly, one layer at a time.</code></pre>
+<p><strong>LightGBM (leaf-wise):</strong></p>
+<pre><code>Step 1: Split root → leaf A reduces loss by 50, leaf B reduces by 10
+Step 2: Split leaf A (biggest gain first) → leaf A1 and A2
+Step 3: Split whichever leaf now has biggest gain
+Always splits the leaf with the most improvement — more efficient.</code></pre>
+
+<h3><span class="param-badge">num_leaves=80</span></h3>
+<p>LightGBM's equivalent of max_depth, but controls total leaf nodes directly.</p>
+<pre><code>max_depth=8  →  2^8 = 256 theoretical max leaves
+num_leaves=80 → exactly 80 leaves (tighter control)
+
+Rule of thumb: num_leaves &lt; 2^max_depth to prevent overfitting
+2^8 = 256, so num_leaves=80 gives a moderate-complexity tree</code></pre>
+<hr />
+
+<h2 id="randomizedsearchcv-automated-hyperparameter-search">RandomizedSearchCV — Automated Hyperparameter Search</h2>
+<pre><code class="language-python">from sklearn.model_selection import RandomizedSearchCV
+
+param_grid = {
+    'n_estimators':    [300, 500, 800, 1000],
+    'max_depth':       [4, 5, 6, 7, 8],
+    'learning_rate':   [0.01, 0.05, 0.1, 0.2],
+    'subsample':       [0.6, 0.7, 0.8, 0.9],
+    'colsample_bytree':[0.5, 0.6, 0.7, 0.8],
+    'min_child_weight':[1, 3, 5, 7]
+}
+
+search = RandomizedSearchCV(
+    xgb,
+    param_distributions=param_grid,
+    n_iter=30,
+    cv=3,
+    scoring='neg_root_mean_squared_error',
+    n_jobs=-1,
+    random_state=42
+)</code></pre>
+
+<h3>Why not try every combination? (GridSearchCV)</h3>
+<p>The <code>param_grid</code> above has:</p>
+<pre><code>4 × 5 × 4 × 4 × 4 × 4 = 5,120 combinations
+Each combination × 3-fold CV = 15,360 model fits
+
+At ~2 minutes per fit → 512 hours. Not practical.</code></pre>
+
+<h3>What RandomizedSearchCV does</h3>
+<p>Instead of all 5,120 combinations, it randomly samples <strong>30</strong> (<code>n_iter=30</code>):</p>
+<pre><code>Trial 1:  n_est=800, depth=6, lr=0.05, sub=0.7 → CV RMSE=23,400
+Trial 2:  n_est=300, depth=4, lr=0.1,  sub=0.9 → CV RMSE=24,800
+Trial 3:  n_est=1000,depth=7, lr=0.05, sub=0.7 → CV RMSE=22,748 ← best
+...
+Trial 30: n_est=500, depth=5, lr=0.2,  sub=0.6 → CV RMSE=24,100
+
+Best: Trial 3 → use n_est=1000, depth=7, lr=0.05, sub=0.7, col=0.6, mcw=3</code></pre>
+<p>30 random trials often find 80–90% of the improvement that 5,120 grid trials would find — in 1/170th of the time.</p>
+
+<h3><code>cv=3</code> — 3-fold cross-validation inside the search</h3>
+<p>Each trial is evaluated on 3 different train/validation splits. We use 3 folds (not 5) during the search to save time. 5-fold is used for final evaluation only.</p>
+<hr />
+
+<h2 id="results-after-tuning">Results After Tuning</h2>
+<table>
+<thead>
+<tr><th>Version</th><th>Model</th><th>Val RMSE</th><th>Kaggle RMSE</th></tr>
+</thead>
+<tbody>
+<tr><td>v1</td><td>RF Baseline</td><td>$25,871</td><td>25,943</td></tr>
+<tr><td>v2</td><td>RF + FE</td><td>$26,125</td><td>27,582</td></tr>
+<tr><td>v3</td><td>XGBoost Tuned + FE</td><td>$21,828</td><td>22,800</td></tr>
+<tr><td>v4</td><td>LightGBM Default + FE</td><td>$24,018</td><td>24,951</td></tr>
+<tr><td>v5 (LGBM tuned)</td><td>LightGBM Tuned + FE</td><td>$21,762</td><td>—</td></tr>
+<tr><td><strong>v5 (blend)</strong></td><td><strong>45% XGB + 55% LGBM</strong></td><td><strong>$21,570</strong></td><td><strong>22,428 ← best</strong></td></tr>
+</tbody>
+</table>
+<hr />
+
+<h2 id="model-blending">Model Blending</h2>
+<pre><code class="language-python"># Final predictions
+xgb_pred  = xgb_tuned.predict(X_test_fe)
+lgbm_pred = lgbm_tuned.predict(X_test_fe)
+
+# Blend: 45% XGBoost + 55% LightGBM
+blend_pred = 0.45 * xgb_pred + 0.55 * lgbm_pred</code></pre>
+
+<h3>Why blend two models?</h3>
+<p>Two different models make <strong>different kinds of errors</strong>. When you average their predictions, errors cancel out.</p>
+<p>Analogy: Two doctors with different specialisations give you a diagnosis. Their combined opinion is usually more accurate than either alone.</p>
+
+<h3>Why 45% XGB + 55% LGBM?</h3>
+<p>We searched across ratios and found:</p>
+<pre><code>30% XGB + 70% LGBM: val RMSE = $21,620
+40% XGB + 60% LGBM: val RMSE = $21,590
+45% XGB + 55% LGBM: val RMSE = $21,570  ← best
+50% XGB + 50% LGBM: val RMSE = $21,585
+60% XGB + 40% LGBM: val RMSE = $21,650</code></pre>
+
+<h3>Why does blending beat either model alone?</h3>
+<pre><code>Flat A: XGB predicts $520K, LGBM predicts $540K → Blend: $530K → Actual: $532K ✓
+Flat B: XGB predicts $600K (too high), LGBM predicts $560K → Blend: $578K → Actual: $570K ✓
+Flat C: XGB predicts $380K, LGBM predicts $420K (too high) → Blend: $401K → Actual: $400K ✓</code></pre>
+<div class="highlight">
+<p><strong>Kaggle confirmed the improvement:</strong><br>
+XGBoost alone: 22,800 &nbsp;→&nbsp; Blend 45/55: 22,428 &nbsp;→&nbsp; Improvement of -$372 RMSE</p>
+</div>
+<hr />
+
+<h2 id="understanding-overfitting-vs-underfitting">Understanding Overfitting vs Underfitting</h2>
+<pre><code>                   Underfitting          Good fit          Overfitting
+Model complexity:  Too simple     →     Just right   →     Too complex
+Training error:    High                 Low               Very low
+Validation error:  High                 Low               High (gap from train)
+
+Analogy:
+Underfitting: Student memorised only chapter titles — can't answer detailed questions
+Overfitting:  Student memorised every word including typos — fails any paraphrase
+Good fit:     Student understood the concepts — answers new questions correctly</code></pre>
+<p>Signs of overfitting in our context:</p>
+<pre><code>Training RMSE:   $15,000
+Validation RMSE: $25,000   ← gap = $10,000 → overfitting</code></pre>
+<p>How we prevent it:</p>
+<ul>
+<li><code>max_depth</code> limit: prevents trees from being too complex</li>
+<li><code>subsample</code> / <code>colsample_bytree</code>: adds randomness, reduces variance</li>
+<li><code>min_child_weight</code> / <code>min_child_samples</code>: prevents splits on tiny groups</li>
+<li><code>learning_rate</code>: small steps = less risk of overfitting one batch</li>
+<li>Cross-validation: evaluates on held-out data, not training data</li>
+</ul>
+<hr />
+
+<h2 id="the-submission-pipeline">The Submission Pipeline</h2>
+<pre><code class="language-python"># Step 1: Retrain on ALL training data (not just 80%)
+xgb_tuned.fit(X_fe, y)
+lgbm_tuned.fit(X_fe, y)
+
+# Step 2: Predict test set
+xgb_test  = xgb_tuned.predict(X_test_fe)
+lgbm_test = lgbm_tuned.predict(X_test_fe)
+
+# Step 3: Blend
+blend_test = 0.45 * xgb_test + 0.55 * lgbm_test
+
+# Step 4: Save
+submission = pd.DataFrame({'Id': test['id'], 'resale_price': blend_test.round(0)})
+submission.to_csv('../../outputs/submissions/sub_v5_blend.csv', index=False)</code></pre>
+<p>Same principle as baseline: we retrain on full data before final submission to use every data point the model can learn from.</p>
+<hr />
+
+<h2 id="summary-score-progression">Summary — Score Progression</h2>
+<pre><code>Baseline RF (v1)          → $25,871 RMSE   (simple trees, no tuning)
+     ↓  added feature engineering
+RF + FE (v2)              → $26,125 RMSE   (RF doesn't benefit from FE much)
+     ↓  switched to gradient boosting
+XGBoost default           → $23,649 RMSE   (just changing the model type helps!)
+     ↓  tuned with RandomizedSearchCV
+XGBoost tuned (v3)        → $21,828 RMSE   (hyperparameter tuning = -$1,821)
+     ↓  added LightGBM tuning + blending
+Blend 45% XGB + 55% LGBM  → $21,570 RMSE   (blending = -$258)
+
+Total improvement: $25,871 → $21,570 = -$4,301 RMSE
+Kaggle confirmed:  $25,943 → $22,428 = -$3,515 RMSE</code></pre>
+<p>The biggest gain came from <strong>switching models</strong> (RF → XGBoost). Tuning and blending provided meaningful but smaller gains on top.</p>
+<hr />
+
+<h2 id="whats-next">What's Next</h2>
+<p>To push below $20,000 RMSE, the likely improvements are:</p>
+<ol>
+<li><strong>Log-transform the target</strong> (<code>np.log1p(resale_price)</code>) — expensive flats ($1M+) create large absolute errors that dominate RMSE; log transform reduces their outsized impact</li>
+<li><strong>Better target encoding</strong> — compute <code>town_median_price</code> per CV fold (current implementation has slight data leakage)</li>
+<li><strong>More features</strong> — <code>cutoff_point</code> ranking (school proximity signal), <code>dist_to_nearest_mrt_type</code></li>
+<li><strong>Stacking</strong> — train a meta-model on XGB+LGBM predictions (more powerful than simple blending)</li>
+</ol>
+<p>→ Continue in <code>04_model_tuning.ipynb</code></p>
+</body>
+</html>

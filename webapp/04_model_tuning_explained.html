@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>04 — Model Tuning with XGBoost &amp; LightGBM</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 24px 80px; color: #1a1a1a; line-height: 1.7; background: #fafafa; }
+h1 { font-size: 2rem; color: #1a1a1a; border-bottom: 3px solid #0369a1; padding-bottom: 12px; }
+h2 { font-size: 1.4rem; color: #0369a1; margin-top: 48px; border-left: 4px solid #0369a1; padding-left: 12px; }
+h3 { font-size: 1.1rem; color: #374151; margin-top: 28px; }
+h4 { font-size: 1rem; color: #6b7280; margin-top: 20px; }
+code { background: #1e293b; color: #e2e8f0; padding: 2px 7px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.88em; }
+pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 8px; overflow-x: auto; font-size: 0.88em; line-height: 1.6; margin: 16px 0; }
+pre code { background: none; padding: 0; color: inherit; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.93em; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+th { background: #0369a1; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; }
+tr:last-child td { border-bottom: none; }
+tr:nth-child(even) td { background: #f8fafc; }
+blockquote { background: #eff6ff; border-left: 4px solid #0369a1; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #1e3a5f; }
+blockquote p { margin: 0; }
+.highlight { background: #ecfdf5; border-left: 4px solid #059669; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #065f46; }
+.highlight p { margin: 0; }
+.warning { background: #fffbeb; border-left: 4px solid #f59e0b; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #78350f; }
+.warning p { margin: 0; }
+hr { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+p { margin: 10px 0; }
+ul, ol { padding-left: 24px; }
+li { margin: 6px 0; }
+.badge { display: inline-block; background: #0369a1; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; margin-right: 6px; vertical-align: middle; font-family: 'Courier New', monospace; }
+.badge-green { background: #059669; }
+.badge-orange { background: #d97706; }
+.score-box { background: white; border: 2px solid #0369a1; border-radius: 12px; padding: 20px 28px; margin: 24px 0; display: flex; gap: 40px; flex-wrap: wrap; }
+.score-item { text-align: center; }
+.score-label { font-size: 0.82em; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.score-value { font-size: 1.6rem; font-weight: 700; color: #0369a1; }
+.score-delta { font-size: 0.88em; color: #059669; font-weight: 600; }
+</style>
+<script src="nav.js"></script>
+</head>
+<body>
+
+<h1>04 — Model Tuning with XGBoost &amp; LightGBM<br><small style="font-size:0.55em;color:#6b7280;">From Random Forest to Gradient Boosting — A Step-by-Step Walkthrough</small></h1>
+
+<div class="score-box">
+  <div class="score-item">
+    <div class="score-label">XGBoost Tuned Val RMSE</div>
+    <div class="score-value" style="color:#059669">$21,828</div>
+    <div class="score-delta">↓ from $25,871 RF baseline</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Best CV RMSE (RandomizedSearch)</div>
+    <div class="score-value" style="color:#0369a1">$22,748</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">v5 Blend Kaggle RMSE</div>
+    <div class="score-value" style="color:#d97706">$22,428</div>
+    <div class="score-delta">45% XGB + 55% LGBM</div>
+  </div>
+</div>
+
+<div class="highlight"><p><strong>Key insight:</strong> Switching from Random Forest to gradient boosting cut validation RMSE by ~$4,000 before any tuning — the single largest model architecture improvement in the project.</p></div>
+
+<h2 id="why-gradient-boosting-over-random-forest">Why Gradient Boosting over Random Forest?</h2>
+
+<p>Random Forest builds all its trees <strong>independently</strong> in parallel — each tree sees a random subset of data and makes its best guess. The final prediction is just the average. This works well, but no tree ever learns from another's mistakes.</p>
+
+<p>Gradient boosting is <strong>sequential</strong>. You start with a simple guess (say, the mean resale price of all flats). Then you build a tree to predict the <em>residual error</em> — the gap between what you guessed and what actually happened. You add that correction to the model. Repeat 500–1000 times. Each round, the model gets a little less wrong on the hardest-to-predict rows.</p>
+
+<p>LightGBM adds one more innovation: it grows trees <strong>leaf-wise</strong> (deepest, highest-gain leaf first) rather than level-wise. This focuses effort on the rows that are still hardest to predict.</p>
+
+<table>
+  <thead><tr><th></th><th>Random Forest</th><th>XGBoost / LightGBM</th></tr></thead>
+  <tbody>
+    <tr><td>Tree construction</td><td>All trees built independently</td><td>Each tree corrects previous errors</td></tr>
+    <tr><td>Growth strategy</td><td>Level-wise</td><td>XGB: level-wise; LGBM: leaf-wise</td></tr>
+    <tr><td>Speed</td><td>Slower on large data</td><td>Much faster (LGBM especially)</td></tr>
+    <tr><td>Competition performance</td><td>Good baseline</td><td>Usually top performer on tabular data</td></tr>
+  </tbody>
+</table>
+
+<h2 id="preprocessing-pipeline">Preprocessing Pipeline</h2>
+
+<p>Both models share the same <code>sklearn</code> Pipeline: median imputation for numerics, most-frequent imputation + OrdinalEncoder for categoricals. XGBoost and LightGBM can handle missing values natively, but keeping a consistent pipeline makes model swapping trivial.</p>
+
+<pre><code>num_pipe = Pipeline([('imp', SimpleImputer(strategy='median'))])
+cat_pipe = Pipeline([('imp', SimpleImputer(strategy='most_frequent')),
+                     ('enc', OrdinalEncoder(handle_unknown='use_encoded_value',
+                                            unknown_value=-1))])
+preprocessor = ColumnTransformer([('num', num_pipe, num_cols),
+                                   ('cat', cat_pipe, cat_cols)])</code></pre>
+
+<h2>XGBoost &amp; LightGBM — Default Baselines</h2>
+
+<p>Before tuning anything, both models run with sensible defaults to establish how much the model architecture change alone is worth:</p>
+
+<table>
+  <thead><tr><th>Model</th><th>Val RMSE</th><th>5-Fold CV RMSE</th></tr></thead>
+  <tbody>
+    <tr><td>RF v1 Baseline</td><td>$25,871</td><td>$26,389</td></tr>
+    <tr><td>XGBoost default</td><td>$23,649</td><td>$23,932 ± $328</td></tr>
+    <tr><td>LightGBM default</td><td>$24,018</td><td>$24,348 ± $282</td></tr>
+  </tbody>
+</table>
+
+<p>XGBoost already beats RF by ~$2,200 before a single hyperparameter is changed. XGBoost edges LightGBM on both metrics, so it's chosen for tuning first.</p>
+
+<h3>Key hyperparameters explained</h3>
+
+<table>
+  <thead><tr><th>Parameter</th><th>What it controls</th><th>Typical range</th></tr></thead>
+  <tbody>
+    <tr><td><code>n_estimators</code></td><td>Number of boosting rounds (trees)</td><td>300–1000</td></tr>
+    <tr><td><code>max_depth</code></td><td>How deep each tree grows</td><td>4–8</td></tr>
+    <tr><td><code>learning_rate</code></td><td>Contribution of each tree — lower is safer</td><td>0.01–0.1</td></tr>
+    <tr><td><code>subsample</code></td><td>Fraction of rows each tree sees</td><td>0.7–1.0</td></tr>
+    <tr><td><code>colsample_bytree</code></td><td>Fraction of columns each tree sees</td><td>0.6–1.0</td></tr>
+    <tr><td><code>min_child_weight</code></td><td>Minimum samples required in a leaf</td><td>1–10</td></tr>
+  </tbody>
+</table>
+
+<div class="warning"><p><strong>Rule of thumb:</strong> Lower <code>learning_rate</code> + more <code>n_estimators</code> = better accuracy, but slower training. The winning config used 0.05 + 1000 trees.</p></div>
+
+<h2 id="hyperparameter-tuning-randomizedsearchcv">Hyperparameter Tuning — RandomizedSearchCV</h2>
+
+<p>Grid Search tries every possible combination — with 5 parameters each having 4–5 options, that's thousands of fits. <strong>RandomizedSearchCV</strong> randomly samples 30 combinations instead. This is 10–100× faster and typically finds a near-optimal result.</p>
+
+<pre><code>param_dist = {
+    'model__n_estimators'     : [300, 500, 700, 1000],
+    'model__max_depth'        : [4, 5, 6, 7, 8],
+    'model__learning_rate'    : [0.01, 0.03, 0.05, 0.08, 0.1],
+    'model__subsample'        : [0.7, 0.8, 0.9, 1.0],
+    'model__colsample_bytree' : [0.6, 0.7, 0.8, 0.9, 1.0],
+    'model__min_child_weight' : [1, 3, 5, 10],
+}
+xgb_search = RandomizedSearchCV(
+    xgb_default, param_distributions=param_dist,
+    n_iter=30, cv=3, scoring='neg_root_mean_squared_error',
+    random_state=42, n_jobs=-1
+)</code></pre>
+
+<p>After 90 total fits (30 combinations × 3-fold CV), the winning configuration:</p>
+
+<table>
+  <thead><tr><th>Parameter</th><th>Winning Value</th></tr></thead>
+  <tbody>
+    <tr><td><code>n_estimators</code></td><td>1000</td></tr>
+    <tr><td><code>max_depth</code></td><td>7</td></tr>
+    <tr><td><code>learning_rate</code></td><td>0.05</td></tr>
+    <tr><td><code>subsample</code></td><td>0.7</td></tr>
+    <tr><td><code>colsample_bytree</code></td><td>0.6</td></tr>
+    <tr><td><code>min_child_weight</code></td><td>3</td></tr>
+  </tbody>
+</table>
+
+<p>Best CV RMSE: <strong>$22,748</strong> &rarr; Validation RMSE with winning params: <strong>$21,828</strong></p>
+
+<h2 id="feature-importance-tuned-xgboost">Feature Importance — Tuned XGBoost</h2>
+
+<p>The feature importance chart shows which signals the tuned model relies on most. Engineered features (shown in red) punch well above their weight:</p>
+
+<ul>
+  <li><strong><code>dist_to_cbd</code></strong> and <strong><code>remaining_lease</code></strong> — the top two engineered features, consistently ranked highest across every model in this project</li>
+  <li><strong><code>floor_area_sqm</code></strong> and <strong><code>town_median_price</code></strong> — strongest original and derived features</li>
+  <li><strong><code>amenity_score</code></strong>, <strong><code>is_mature_estate</code></strong>, and cyclical month encodings also rank in the top 15</li>
+</ul>
+
+<p>This validates the feature engineering in notebook 03 — the model genuinely uses these calculated signals, not just raw columns.</p>
+
+<h2 id="model-blending-v5">Model Blending — v5</h2>
+
+<p>Even if one model is slightly stronger alone, blending often improves accuracy because two different models make <em>different kinds of errors</em>, and averaging partially cancels them out.</p>
+
+<p>The notebook sweeps every 5% from 0% XGB / 100% LGBM to 100% XGB / 0% LGBM, measuring val RMSE at each point. The optimal mix:</p>
+
+<div class="highlight"><p><strong>Best blend: 45% XGBoost + 55% LightGBM &rarr; Kaggle RMSE $22,428</strong><br>Better than either model alone (XGB tuned: $22,801 Kaggle; LGBM default: $24,952).</p></div>
+
+<h2 id="results-summary">Results Summary</h2>
+
+<table>
+  <thead><tr><th>Version</th><th>Model</th><th>Val RMSE</th><th>Kaggle RMSE</th></tr></thead>
+  <tbody>
+    <tr><td>v1</td><td>RF Baseline</td><td>$25,871</td><td>$25,943</td></tr>
+    <tr><td>v2</td><td>RF + Feature Engineering</td><td>$26,125</td><td>$27,582</td></tr>
+    <tr><td>v3</td><td>XGBoost tuned</td><td>$21,828</td><td>$22,801</td></tr>
+    <tr><td>v4</td><td>LightGBM default</td><td>$24,018</td><td>$24,952</td></tr>
+    <tr><td>v5</td><td>45% XGB + 55% LGBM blend</td><td>~$21,500</td><td>$22,428</td></tr>
+  </tbody>
+</table>
+
+<h2 id="key-takeaways">Key Takeaways</h2>
+
+<ul>
+  <li>Switching from Random Forest to gradient boosting cut val RMSE by ~$4,000 — the largest single model improvement in the project, and it happened before any tuning.</li>
+  <li>RandomizedSearchCV with 30 iterations found params that improved XGBoost from $23,649 → $21,828; exhaustive Grid Search wasn't necessary.</li>
+  <li><code>dist_to_cbd</code> and <code>remaining_lease</code> are the two most important engineered features — they appear at the top of every importance ranking across all models.</li>
+  <li>Blending two independently tuned models (XGB + LGBM) improved over either model alone, confirming that diverse models make complementary errors.</li>
+  <li>Lower <code>learning_rate</code> (0.05) + more trees (1000) consistently outperformed higher learning rates with fewer rounds in this dataset.</li>
+</ul>
+
+<hr>
+<p style="color:#9ca3af;font-size:0.85em;text-align:center;">
+  <span class="badge" style="background:#6b7280;">Experiment</span>
+  <span class="badge">04_model_tuning.ipynb</span>
+  Team 3 &bull; NTU SCTP Module 3 &bull; 2026-04-24
+</p>
+
+</body>
+</html>
