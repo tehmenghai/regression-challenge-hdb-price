@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>10 — v11: Price Interaction Target Encoding</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 24px 80px; color: #1a1a1a; line-height: 1.7; background: #fafafa; }
+h1 { font-size: 2rem; color: #1a1a1a; border-bottom: 3px solid #0369a1; padding-bottom: 12px; }
+h2 { font-size: 1.4rem; color: #0369a1; margin-top: 48px; border-left: 4px solid #0369a1; padding-left: 12px; }
+h3 { font-size: 1.1rem; color: #374151; margin-top: 28px; }
+h4 { font-size: 1rem; color: #6b7280; margin-top: 20px; }
+code { background: #1e293b; color: #e2e8f0; padding: 2px 7px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.88em; }
+pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 8px; overflow-x: auto; font-size: 0.88em; line-height: 1.6; margin: 16px 0; }
+pre code { background: none; padding: 0; color: inherit; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.93em; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+th { background: #0369a1; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; }
+tr:last-child td { border-bottom: none; }
+tr:nth-child(even) td { background: #f8fafc; }
+blockquote { background: #eff6ff; border-left: 4px solid #0369a1; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #1e3a5f; }
+blockquote p { margin: 0; }
+.highlight { background: #ecfdf5; border-left: 4px solid #059669; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #065f46; }
+.highlight p { margin: 0; }
+.warning { background: #fffbeb; border-left: 4px solid #f59e0b; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #78350f; }
+.warning p { margin: 0; }
+hr { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+p { margin: 10px 0; }
+ul, ol { padding-left: 24px; }
+li { margin: 6px 0; }
+.badge { display: inline-block; background: #0369a1; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; margin-right: 6px; vertical-align: middle; font-family: 'Courier New', monospace; }
+.badge-green { background: #059669; }
+.badge-orange { background: #d97706; }
+.score-box { background: white; border: 2px solid #0369a1; border-radius: 12px; padding: 20px 28px; margin: 24px 0; display: flex; gap: 40px; flex-wrap: wrap; }
+.score-item { text-align: center; }
+.score-label { font-size: 0.82em; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.score-value { font-size: 1.6rem; font-weight: 700; color: #0369a1; }
+.score-delta { font-size: 0.88em; color: #059669; font-weight: 600; }
+</style>
+<script src="nav.js"></script>
+</head>
+<body>
+
+<h1>10 — v11: Price Interaction Target Encoding<br>
+<small style="font-size:0.55em;color:#6b7280;">Three new OOF interaction features + hdb_age bug fix · XGB+LGBM+ET stack</small></h1>
+
+<div class="score-box">
+  <div class="score-item">
+    <div class="score-label">Ridge Meta OOF RMSE</div>
+    <div class="score-value" style="color:#059669">$21,716</div>
+    <div class="score-delta">optimistic (pre-Kaggle)</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Equal-Weight Blend OOF</div>
+    <div class="score-value">$21,846</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">v10 Kaggle Baseline</div>
+    <div class="score-value" style="color:#6b7280">~$21,755</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Best Individual OOF</div>
+    <div class="score-value">$21,944</div>
+    <div class="score-delta">LGBM</div>
+  </div>
+</div>
+
+<div class="highlight"><p><strong>Key insight:</strong> Encoding the <em>interaction</em> of flat type × postal sector gives the model a direct price signal for each (location, flat type) pair — capturing up to a $595K gap that a sector-only encoding misses entirely.</p></div>
+
+<hr>
+
+<h2 id="overview">Overview</h2>
+
+<p>Previous versions encoded geographic price signals at the postal-sector level, but gave every flat type in a sector the same baseline price. A 5-room in Queenstown sector 1425 sells for ~$845K while a 2-room in the same sector sells for ~$250K. The single <code>postal_sector_median_price</code> cannot distinguish these — it reports the same number for both rows.</p>
+
+<p>This notebook introduces three new <strong>interaction OOF target encodings</strong> that pair resale price with two categorical dimensions simultaneously. All are computed out-of-fold to prevent leakage, and sparse groups fall back to a parent-level encoding rather than the global median.</p>
+
+<p>A secondary fix corrects <code>hdb_age</code>, which in the raw data was computed using a hardcoded 2021 reference year, making it inconsistent with <code>remaining_lease</code> (which uses <code>Tranc_Year</code>). After the fix, <code>hdb_age + remaining_lease = 99</code> for every row — as it should be for a 99-year HDB lease.</p>
+
+<hr>
+
+<h2 id="2-feature-engineering">2. Feature Engineering</h2>
+
+<h3>hdb_age Fix</h3>
+
+<p>The raw dataset computed <code>hdb_age = 2021 - lease_commence_date</code> (a fixed snapshot). This contradicts <code>remaining_lease = 99 - (Tranc_Year - lease_commence_date)</code>, which uses the actual transaction year. For a flat sold in 2012: <code>hdb_age + remaining_lease = 34 + 74 = 108</code> — nine years off. The fix:</p>
+
+<pre><code># Before (raw data): hdb_age = 2021 - lease_commence_date  ← wrong
+# After (fix):
+df['hdb_age'] = df['Tranc_Year'] - df['lease_commence_date']
+# Now: hdb_age + remaining_lease = 99 always ✓</code></pre>
+
+<h3>Composite Key Columns</h3>
+
+<p>Three string keys are built by concatenating existing columns. They are used only as groupby keys for encoding — they are dropped from the model's feature matrix <code>X</code> afterwards:</p>
+
+<pre><code>df['ft_sector_key'] = df['flat_type'] + '_' + df['postal_sector']   # e.g. "4 ROOM_1424"
+df['yr_sector_key'] = df['Tranc_Year'].astype(str) + '_' + df['postal_sector']  # e.g. "2018_1424"
+df['yr_ft_key']     = df['Tranc_Year'].astype(str) + '_' + df['flat_type']      # e.g. "2018_4 ROOM"</code></pre>
+
+<hr>
+
+<h2 id="3-per-fold-oof-target-encoding">3. Per-Fold OOF Target Encoding</h2>
+
+<p>Out-of-fold encoding ensures each row's encoded value is computed from the <em>other four folds only</em> — the row never contributes to its own price signal. This prevents data leakage while still producing an encoded value for every training row.</p>
+
+<div class="highlight"><p><strong>Why OOF matters:</strong> If you compute <code>town_median_price</code> using all training data and then train on it, the model is partly memorising the target. OOF breaks this — each row's encoding comes from data it wasn't trained on.</p></div>
+
+<table>
+  <tr><th>Group key</th><th>Output column</th><th>min_count</th><th>Fallback</th></tr>
+  <tr><td><code>town</code></td><td><code>town_median_price</code></td><td>1</td><td>global median</td></tr>
+  <tr><td><code>postal_sector</code></td><td><code>postal_sector_median_price</code></td><td>10</td><td>global median</td></tr>
+  <tr><td><code>flat_model</code></td><td><code>flat_model_median_price</code></td><td>1</td><td>global median</td></tr>
+  <tr><td><code>ft_sector_key</code></td><td><code>ft_sector_median_price</code></td><td>10</td><td><code>postal_sector_median_price</code></td></tr>
+  <tr><td><code>yr_sector_key</code></td><td><code>yr_sector_median_price</code></td><td>10</td><td><code>postal_sector_median_price</code></td></tr>
+  <tr><td><code>yr_ft_key</code></td><td><code>yr_flattype_median_price</code></td><td>1</td><td>global median</td></tr>
+</table>
+
+<p>The two sparse interaction features fall back to <code>postal_sector_median_price</code> — not the global median — because that's a much tighter estimate for any rare group.</p>
+
+<div class="warning"><p><strong>Sparsity risk:</strong> <code>yr_sector_key</code> has ~5,133 groups with 44.5% having fewer than 10 rows. Fold 2's outlier result ($22,460 vs ~$21,700 in other folds) shows this instability in action.</p></div>
+
+<hr>
+
+<h2 id="68-hyperparameter-search">6–8. Hyperparameter Search</h2>
+
+<p>All three models use <code>RandomizedSearchCV</code> with 3-fold CV, scoring on dollar-RMSE (not log-space RMSE). This means the search directly optimises the metric that Kaggle evaluates.</p>
+
+<table>
+  <tr><th>Model</th><th>Key Best Params</th><th>Val RMSE</th></tr>
+  <tr><td>XGBoost</td><td>n_estimators=2000, max_depth=7, lr=0.05, subsample=0.9, colsample_bytree=0.4</td><td>$21,887</td></tr>
+  <tr><td>LightGBM</td><td>n_estimators=1000, num_leaves=300, max_depth=12, lr=0.03, subsample=0.8</td><td>$21,782</td></tr>
+  <tr><td>ExtraTrees</td><td>n_estimators=200, max_depth=30, max_features=0.5, min_samples_split=5</td><td>$23,339</td></tr>
+</table>
+
+<p>The CV RMSE during search (~$22,766 for XGB) is higher than the val RMSE ($21,887) because each fold trains on only ~53% of data. This is expected — it's not a sign of something wrong.</p>
+
+<hr>
+
+<h2 id="9-oof-fold-loop-key-design-detail">9. OOF Fold Loop — Key Design Detail</h2>
+
+<p>The group key columns were dropped from <code>X</code> (they are encoding keys, not model features). The fold loop must therefore read them from <code>train_fe</code> — which still has all columns — using the same positional indices:</p>
+
+<pre><code>for group_col, price_col, min_ct, fallback_col in ENCODE_PAIRS:
+    # Read group keys from train_fe, not X_tr (they were dropped from X)
+    tr_groups = train_fe.iloc[tr_idx][group_col].values
+    va_groups = train_fe.iloc[va_idx][group_col].values
+    ...
+    # Map fold medians back onto X_tr/X_va with correct index alignment
+    X_tr[price_col] = pd.Series(tr_groups, index=X_tr.index).map(fold_map).fillna(global_med_tr)</code></pre>
+
+<h3>5-Fold OOF Results</h3>
+
+<table>
+  <tr><th>Fold</th><th>XGB RMSE</th><th>LGBM RMSE</th><th>ET RMSE</th></tr>
+  <tr><td>1</td><td>$21,593</td><td>$21,642</td><td>$23,399</td></tr>
+  <tr><td>2</td><td style="color:#b45309;font-weight:600">$22,460</td><td style="color:#b45309;font-weight:600">$22,515</td><td>$23,980</td></tr>
+  <tr><td>3</td><td>$21,738</td><td>$21,727</td><td>$23,594</td></tr>
+  <tr><td>4</td><td>$22,031</td><td>$22,024</td><td>$23,701</td></tr>
+  <tr><td>5</td><td>$21,933</td><td>$21,803</td><td>$23,550</td></tr>
+  <tr><td><strong>Mean</strong></td><td><strong>$21,951</strong></td><td><strong>$21,942</strong></td><td><strong>$23,645</strong></td></tr>
+</table>
+
+<p>Fold 2 is the outlier, likely driven by sparse <code>yr_sector_key</code> groups getting unstable fold medians. The fallback to <code>postal_sector_median_price</code> mitigates but doesn't eliminate this.</p>
+
+<hr>
+
+<h2 id="11-ridge-meta-model">11. Ridge Meta-Model</h2>
+
+<p>Ridge learns the optimal combination weights from the three OOF prediction vectors. Key observations:</p>
+
+<table>
+  <tr><th>Alpha</th><th>Ridge OOF RMSE</th><th>XGB coef</th><th>LGBM coef</th><th>ET coef</th></tr>
+  <tr><td>0.001</td><td><strong>$21,716</strong></td><td>0.4524</td><td>0.4113</td><td>0.1389</td></tr>
+  <tr><td>1.0</td><td>$21,716</td><td>0.4498</td><td>0.4102</td><td>0.1426</td></tr>
+  <tr><td>10.0</td><td>$21,721</td><td>0.4318</td><td>0.4003</td><td>0.1704</td></tr>
+  <tr><td>100.0</td><td>$21,776</td><td>0.3731</td><td>0.3610</td><td>0.2666</td></tr>
+</table>
+
+<ul>
+  <li><strong>Alpha insensitivity</strong>: RMSE is flat from 0.001–1.0, meaning the meta-model is not sensitive to regularisation — base models are well-calibrated.</li>
+  <li><strong>All positive coefficients</strong>: XGB (~0.45), LGBM (~0.41), ET (~0.14) — every model contributes genuine, non-redundant signal.</li>
+  <li><strong>Stacking gain</strong>: Ridge OOF ($21,716) vs best individual OOF ($21,944) = <strong>$228 improvement</strong> from combining diverse models.</li>
+</ul>
+
+<hr>
+
+<h2 id="results">Results</h2>
+
+<table>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>XGB val RMSE</td><td>$21,887</td></tr>
+  <tr><td>LGBM val RMSE</td><td>$21,782</td></tr>
+  <tr><td>ET val RMSE</td><td>$23,339</td></tr>
+  <tr><td>XGB OOF RMSE (5-fold mean)</td><td>$21,951</td></tr>
+  <tr><td>LGBM OOF RMSE (5-fold mean)</td><td>$21,944</td></tr>
+  <tr><td>ET OOF RMSE (5-fold mean)</td><td>$23,645</td></tr>
+  <tr><td>Equal-weight blend OOF RMSE</td><td>$21,846</td></tr>
+  <tr><td><strong>Ridge meta OOF RMSE</strong></td><td><strong>$21,716</strong></td></tr>
+  <tr><td>v10 Kaggle baseline</td><td>~$21,755</td></tr>
+</table>
+
+<hr>
+
+<h2 id="key-takeaways">Key Takeaways</h2>
+
+<ul>
+  <li><strong>Interaction encodings address a genuine gap.</strong> <code>ft_sector_median_price</code> gives the model a direct price signal for each (flat type, location) combination — a 5-room and 2-room in the same sector differ by up to $595K, and the model can now learn this directly.</li>
+  <li><strong>Sparsity is the main risk.</strong> <code>yr_sector_median_price</code> has 44.5% of groups with fewer than 10 rows. Fold 2's outlier ($22,460) shows the instability this causes. If the Kaggle score regresses, dropping this feature is the first experiment to try.</li>
+  <li><strong>The hdb_age fix removes contradictory noise.</strong> Raw <code>hdb_age</code> used 2021 as reference, causing <code>hdb_age + remaining_lease</code> to sum to 108 for 2012 transactions instead of 99. Both features now consistently reflect the flat's age at time of sale.</li>
+  <li><strong>Ridge OOF is optimistic.</strong> The meta-train RMSE ($21,716) is always lower than the true Kaggle score. Based on the v9 gap (+$128), the estimated Kaggle RMSE is ~$21,844 — which could go either way relative to v10's $21,755.</li>
+  <li><strong>Stacking adds ~$228 over the best individual model.</strong> The diversity between XGB, LGBM, and ET is preserved — all three Ridge coefficients are positive and meaningful.</li>
+</ul>
+
+<hr>
+<p style="color:#9ca3af;font-size:0.85em;text-align:center;">
+  <span class="badge">Experiment</span>
+  <span class="badge">10_price_interaction_features.ipynb</span>
+  Team 3 · NTU SCTP Module 3 · 2026-04-25
+</p>
+
+</body>
+</html>

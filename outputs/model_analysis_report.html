@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Training Analysis Report — HDB Resale Price</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 960px; margin: 40px auto; padding: 0 24px 80px; color: #1a1a1a; line-height: 1.7; background: #fafafa; }
+h1 { font-size: 2rem; color: #1a1a1a; border-bottom: 3px solid #0369a1; padding-bottom: 12px; margin-bottom: 8px; }
+h2 { font-size: 1.4rem; color: #0369a1; margin-top: 56px; border-left: 4px solid #0369a1; padding-left: 12px; }
+h3 { font-size: 1.15rem; color: #374151; margin-top: 32px; }
+h4 { font-size: 1rem; color: #6b7280; margin-top: 20px; }
+code { background: #1e293b; color: #e2e8f0; padding: 2px 7px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.88em; }
+pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 8px; overflow-x: auto; font-size: 0.86em; line-height: 1.65; margin: 16px 0; }
+pre code { background: none; padding: 0; color: inherit; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.91em; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+th { background: #0369a1; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+tr:nth-child(even) td { background: #f8fafc; }
+blockquote { background: #eff6ff; border-left: 4px solid #0369a1; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #1e3a5f; }
+blockquote p { margin: 0; }
+.highlight { background: #ecfdf5; border-left: 4px solid #059669; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #065f46; }
+.highlight p { margin: 0; }
+.warning { background: #fffbeb; border-left: 4px solid #f59e0b; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #78350f; }
+.warning p { margin: 0; }
+hr { border: none; border-top: 1px solid #e5e7eb; margin: 48px 0; }
+p { margin: 10px 0; }
+ul, ol { padding-left: 24px; }
+li { margin: 6px 0; }
+.badge { display: inline-block; background: #0369a1; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; margin-right: 6px; vertical-align: middle; font-family: 'Courier New', monospace; }
+.badge-green { background: #059669; }
+.badge-orange { background: #d97706; }
+.badge-red { background: #dc2626; }
+.score-box { background: white; border: 2px solid #0369a1; border-radius: 12px; padding: 20px 28px; margin: 24px 0; display: flex; gap: 40px; flex-wrap: wrap; }
+.score-item { text-align: center; }
+.score-label { font-size: 0.82em; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.score-value { font-size: 1.6rem; font-weight: 700; color: #0369a1; }
+.score-delta { font-size: 0.88em; color: #059669; font-weight: 600; }
+.toc { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px 28px; margin: 24px 0; }
+.toc h4 { margin: 0 0 12px 0; color: #374151; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.07em; }
+.toc ol { margin: 0; padding-left: 20px; }
+.toc li { margin: 5px 0; font-size: 0.92rem; }
+.toc a { color: #0369a1; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.rank-chip { display: inline-block; background: #0369a1; color: white; min-width: 26px; text-align: center; padding: 2px 6px; border-radius: 12px; font-size: 0.82em; font-weight: 700; margin-right: 4px; }
+.arch-box { background: #1e293b; color: #e2e8f0; border-radius: 10px; padding: 24px 28px; margin: 20px 0; font-family: 'Courier New', monospace; font-size: 0.86em; line-height: 1.7; white-space: pre; overflow-x: auto; }
+.version-badge { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 0.78em; font-weight: 700; margin-right: 4px; }
+.vb-good { background: #d1fae5; color: #065f46; }
+.vb-best { background: #fef3c7; color: #92400e; }
+.vb-bad  { background: #fee2e2; color: #991b1b; }
+</style>
+<script src="nav.js"></script>
+</head>
+<body>
+
+<h1>Model Training Analysis Report<br>
+<small style="font-size:0.5em; color:#6b7280; font-weight:400;">HDB Resale Price Regression — v1 to v9 Consolidated Analysis</small></h1>
+
+<div class="score-box">
+  <div class="score-item">
+    <div class="score-label">Best Kaggle RMSE</div>
+    <div class="score-value" style="color:#d97706">$21,756</div>
+    <div class="score-delta">v9 — Ridge Stack</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Starting RMSE</div>
+    <div class="score-value" style="color:#6b7280">$25,943</div>
+    <div class="score-delta">v1 — RF Baseline</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Total Improvement</div>
+    <div class="score-value" style="color:#059669">&minus;$4,187</div>
+    <div class="score-delta">&minus;16.1% from v1</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Gap to 1st Place</div>
+    <div class="score-value" style="color:#374151">$289</div>
+    <div class="score-delta">1st = $21,466</div>
+  </div>
+</div>
+
+<div class="toc">
+  <h4>Contents</h4>
+  <ol>
+    <li><a href="#overview">Project Overview</a></li>
+    <li><a href="#pipeline">Data Pipeline Steps</a></li>
+    <li><a href="#features">Feature Analysis</a></li>
+    <li><a href="#models">Training Methods &amp; Models</a></li>
+    <li><a href="#validation">Validation Strategy</a></li>
+    <li><a href="#results">Results Progression</a></li>
+    <li><a href="#learnings">Key Learnings &amp; Conclusions</a></li>
+  </ol>
+</div>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════ Section 1 -->
+<h2 id="overview">1. Project Overview</h2>
+
+<h3>Dataset</h3>
+<table>
+  <thead><tr><th>Split</th><th>Rows</th><th>Raw Features</th><th>Target</th></tr></thead>
+  <tbody>
+    <tr><td>Train</td><td>150,634</td><td>77 columns</td><td><code>resale_price</code> (SGD)</td></tr>
+    <tr><td>Test</td><td>16,737</td><td>76 columns (no target)</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<p>Features span: flat attributes (type, floor area, storey), location (lat/lon, town, street), lease data, estate statistics (units sold/rental per room type), and nearby amenity distances (MRT, mall, hawker).</p>
+<p>Competition metric: <strong>RMSE in SGD</strong> — Root Mean Squared Error between predicted and actual resale prices.</p>
+
+<h3>Journey Summary</h3>
+<table>
+  <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Best Kaggle Public RMSE</td><td><strong>$21,756 (v9)</strong></td></tr>
+    <tr><td>Starting RMSE (v1 baseline)</td><td>$25,943</td></tr>
+    <tr><td>Total improvement</td><td>–$4,187 (–16.1%)</td></tr>
+    <tr><td>Submissions made</td><td>9 (v1–v9)</td></tr>
+    <tr><td>Gap to 1st place</td><td>$289 (1st = $21,466)</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════ Section 2 -->
+<h2 id="pipeline">2. Data Pipeline Steps</h2>
+
+<p>The end-to-end flow from raw CSV to Kaggle submission prediction:</p>
+
+<pre><code>Step 1: Raw data ingestion
+   train.csv (150,634 × 77)  +  test.csv (16,737 × 76)
+
+Step 2: Drop redundant columns
+   floor_area_sqft (duplicate), lower/upper/mid (duplicate of mid_storey),
+   full_flat_type, address, Tranc_YearMonth, residential, year_completed
+
+Step 3: Fill missing values
+   - Amenity count columns (e.g. Hawker_Within_500m)  → 0 (none present)
+   - Numeric columns  → median imputation (inside sklearn Pipeline)
+   - Categorical cols → most_frequent + OrdinalEncoder
+
+Step 4: Feature engineering  (16 new features — see Section 3)
+
+Step 5: OOF target encoding  (v6+)
+   - town_median_price            (OOF, 5-fold)
+   - postal_sector_median_price   (OOF, 5-fold)  [v9+]
+   - flat_model_median_price      (OOF, 5-fold)  [v9+]
+
+Step 6: Drop high-cardinality raw columns
+   - postal (9,125 levels) → replaced by postal_sector_median_price
+   - block  (2,514 levels) → replaced by block_num (numeric)
+
+Step 7: Log-transform target  (v6+)
+   y_log = log1p(resale_price)
+   → reduces outsized influence of $1M+ flats on squared-error loss
+
+Step 8: 5-Fold KFold split  (shuffle=True, random_state=42)
+
+Step 9: Hyperparameter tuning  (RandomizedSearchCV, inner 3-fold CV)
+
+Step 10: OOF prediction generation  (stacking, v7+)
+   Each base model trained 5×; val predictions form OOF vector (n=150,634)
+
+Step 11: Ridge meta-learner
+   Trained on [xgb_oof, lgbm_oof, et_oof] → learns optimal blend weights
+
+Step 12: Test predictions
+   Base models averaged over 5 folds → Ridge → expm1() inversion
+
+Step 13: Kaggle submission CSV
+   Format: Id, Predicted</code></pre>
+
+<div class="highlight"><p><strong>Why log1p the target?</strong> An RMSE of $30,000 on a $600K flat (5%) hurts the loss just as much as $30,000 on a $300K flat (10%). Log-transforming the target brings the prediction task closer to minimising percentage errors — reducing the disproportionate influence of expensive outliers.</p></div>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════ Section 3 -->
+<h2 id="features">3. Feature Analysis</h2>
+
+<h3 id="feature-inventory">3.1 Complete Feature Inventory (v9 — 71 features)</h3>
+
+<h4>Raw Features Retained (after dropping redundancies)</h4>
+<table>
+  <thead><tr><th>Category</th><th>Example features</th></tr></thead>
+  <tbody>
+    <tr><td>Flat attributes</td><td><code>flat_type</code>, <code>flat_model</code>, <code>floor_area_sqm</code>, <code>mid_storey</code>, <code>max_floor_lvl</code>, <code>storey_range</code></td></tr>
+    <tr><td>Location (geographic)</td><td><code>Latitude</code>, <code>Longitude</code>, <code>town</code>, <code>street_name</code>, <code>planning_area</code></td></tr>
+    <tr><td>Lease &amp; time</td><td><code>lease_commence_date</code>, <code>Tranc_Year</code>, <code>Tranc_Month</code></td></tr>
+    <tr><td>Estate statistics</td><td><code>total_dwelling_units</code>, <code>1room_sold</code>–<code>studio_apartment_sold</code>, <code>1room_rental</code>–<code>other_room_rental</code></td></tr>
+    <tr><td>Nearby amenities</td><td><code>mrt_nearest_distance</code>, <code>Mall_Nearest_Distance</code>, <code>Hawker_Nearest_Distance</code>, within-Xkm count columns</td></tr>
+  </tbody>
+</table>
+
+<h4>Engineered Features (16 features)</h4>
+<table>
+  <thead><tr><th>Feature</th><th>Formula / Source</th><th>What it captures</th><th>Added</th></tr></thead>
+  <tbody>
+    <tr><td><code>remaining_lease</code></td><td><code>99 − (Tranc_Year − lease_commence_date)</code></td><td>Years of lease remaining; flat value decays as lease shortens</td><td>v2</td></tr>
+    <tr><td><code>dist_to_cbd</code></td><td>Haversine km to Raffles Place (1.2847°N, 103.851°E)</td><td>Distance from CBD — closer = pricier; explicit signal XGBoost exploits well</td><td>v2</td></tr>
+    <tr><td><code>is_mature_estate</code></td><td>Binary: 1 if town in 15 HDB-designated mature towns</td><td>~10–20% price premium for established, infrastructure-rich estates</td><td>v2</td></tr>
+    <tr><td><code>tranc_month_sin</code></td><td><code>sin(2π × Tranc_Month / 12)</code></td><td>Cyclical month encoding — fixes the Dec (12) → Jan (1) discontinuity</td><td>v2</td></tr>
+    <tr><td><code>tranc_month_cos</code></td><td><code>cos(2π × Tranc_Month / 12)</code></td><td>Pairs with sin for full cyclical representation</td><td>v2</td></tr>
+    <tr><td><code>total_sold</code></td><td>Sum of 8 <code>xroom_sold</code> columns</td><td>Total units sold in the block — aggregate supply signal</td><td>v2</td></tr>
+    <tr><td><code>rental_ratio</code></td><td><code>total_rental / total_dwelling_units</code></td><td>Fraction of block in rental scheme — desirability proxy</td><td>v2</td></tr>
+    <tr><td><code>floor_area_per_room</code></td><td><code>floor_area_sqm / num_rooms</code></td><td>Spaciousness signal that's independent of flat type category</td><td>v2</td></tr>
+    <tr><td><code>amenity_score</code></td><td>Normalised inverse sum of MRT/mall/hawker distances</td><td>Composite convenience index [0, 1]; closer to multiple amenities = higher score</td><td>v2</td></tr>
+    <tr><td><code>dist_x_storey</code></td><td><code>dist_to_cbd × mid_storey</code></td><td>Floor-level premium is larger nearer the CBD</td><td>v6</td></tr>
+    <tr><td><code>lease_x_area</code></td><td><code>remaining_lease × floor_area_sqm</code></td><td>Larger flats depreciate faster as lease shortens</td><td>v6</td></tr>
+    <tr><td><code>log_dist_to_cbd</code></td><td><code>log1p(dist_to_cbd)</code></td><td>Linearises the curved distance–price relationship</td><td>v6</td></tr>
+    <tr><td><code>street_freq</code></td><td>Count of transactions per <code>street_name</code></td><td>Street-level desirability — high transaction volume = sought-after street</td><td>v7</td></tr>
+    <tr><td><code>postal_sector</code></td><td>First 4 chars of <code>postal</code> (598 unique sectors)</td><td>Intermediate geography — finer than town (26), coarser than raw postal (9,125)</td><td>v9</td></tr>
+    <tr><td><code>block_num</code></td><td>Numeric part of <code>block</code> string ("123A" → 123)</td><td>Block-level signal — replaces 2,514-category ordinal noise</td><td>v9</td></tr>
+  </tbody>
+</table>
+
+<h4>OOF Target-Encoded Features (3 numeric features)</h4>
+<table>
+  <thead><tr><th>Feature</th><th>Group</th><th>Groups (unique)</th><th>Why OOF?</th></tr></thead>
+  <tbody>
+    <tr><td><code>town_median_price</code></td><td><code>town</code></td><td>26</td><td>Val row's encoding computed from train rows only — no label leakage</td></tr>
+    <tr><td><code>postal_sector_median_price</code></td><td><code>postal_sector</code></td><td>598</td><td>Same; finer geography than town — single biggest feature in v9</td></tr>
+    <tr><td><code>flat_model_median_price</code></td><td><code>flat_model</code></td><td>~20</td><td>Type S2 median ~$1M vs Improved ~$450K — $550K spread captured as numeric</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h3 id="feature-importance">3.2 Feature Importance Analysis</h3>
+
+<div class="highlight"><p><strong>How feature importance is measured:</strong> XGBoost and LightGBM report importance by <em>gain</em> — the average reduction in RMSE² contributed each time a feature is used in a split. Features with high gain reduce prediction error the most.</p></div>
+
+<h4>High-Confidence Important Features</h4>
+
+<p>These features show strong, consistent signal across multiple model versions and architectures:</p>
+
+<table>
+  <thead><tr><th>Rank</th><th>Feature</th><th>Type</th><th>Direction</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><span class="rank-chip">1</span></td>
+      <td><code>floor_area_sqm</code></td>
+      <td>Raw</td>
+      <td>↑ larger = pricier</td>
+      <td>PCA PC1 dominant loading; top feature by gain in all tree models; physically obvious — you pay per square metre</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">2</span></td>
+      <td><code>town_median_price</code></td>
+      <td>OOF-encoded</td>
+      <td>↑ higher town median = pricier flat</td>
+      <td>Direct price-level signal; v2→v6 showed encoding quality matters more than the feature itself</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">3</span></td>
+      <td><code>postal_sector_median_price</code></td>
+      <td>OOF-encoded (v9+)</td>
+      <td>↑ higher sector median = pricier</td>
+      <td>Replaced 9,125-level ordinal noise; ~$200–$400 expected gain; biggest single change in v9</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">4</span></td>
+      <td><code>mid_storey</code></td>
+      <td>Raw</td>
+      <td>↑ higher floor = pricier</td>
+      <td>Floor premium is well-established in Singapore HDB market; interacts with dist_to_cbd</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">5</span></td>
+      <td><code>remaining_lease</code></td>
+      <td>Engineered</td>
+      <td>↑ more years = pricier</td>
+      <td>Top 2 engineered feature by XGBoost gain (v3); lease decay is a fundamental HDB pricing signal</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">6</span></td>
+      <td><code>dist_to_cbd</code></td>
+      <td>Engineered</td>
+      <td>↓ closer to CBD = pricier</td>
+      <td>Top 2 engineered feature by XGBoost gain (v3); explicit geographic signal gradient boosting exploits strongly</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">7</span></td>
+      <td><code>flat_model_median_price</code></td>
+      <td>OOF-encoded (v9+)</td>
+      <td>↑ higher model tier = pricier</td>
+      <td>~$550K spread between Type S2 and Improved; direct price-tier signal</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">8</span></td>
+      <td><code>floor_area_per_room</code></td>
+      <td>Engineered</td>
+      <td>↑ more space per room = pricier</td>
+      <td>Spaciousness signal independent of room count label; captures premium for airy layouts</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">9</span></td>
+      <td><code>is_mature_estate</code></td>
+      <td>Engineered</td>
+      <td>↑ mature = +10–20% premium</td>
+      <td>Consistent positive signal in all model versions; confirmed by HDB market studies</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">10</span></td>
+      <td><code>amenity_score</code></td>
+      <td>Engineered</td>
+      <td>↑ better amenities = pricier</td>
+      <td>PCA PC1 includes amenity density; composite MRT/mall/hawker signal</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">11</span></td>
+      <td><code>dist_x_storey</code></td>
+      <td>Interaction (v6+)</td>
+      <td>High near-CBD + high floor = premium</td>
+      <td>Captures that floor premiums amplify in desirable locations</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">12</span></td>
+      <td><code>lease_x_area</code></td>
+      <td>Interaction (v6+)</td>
+      <td>Asymmetric depreciation pattern</td>
+      <td>Larger flats with short leases suffer more — captures multiplicative decay</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">13</span></td>
+      <td><code>street_freq</code></td>
+      <td>Behavioral (v7+)</td>
+      <td>↑ more transactions = desirable</td>
+      <td>Block-level demand signal; contributed ~$65 gap reduction in v7</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">14</span></td>
+      <td><code>mrt_nearest_distance</code></td>
+      <td>Raw</td>
+      <td>↓ closer MRT = pricier</td>
+      <td>Direct transit accessibility; partly captured by amenity_score but retained for granularity</td>
+    </tr>
+    <tr>
+      <td><span class="rank-chip">15</span></td>
+      <td><code>log_dist_to_cbd</code></td>
+      <td>Engineered (v6+)</td>
+      <td>↓ lower = pricier</td>
+      <td>Linearises the distance signal; trees benefit from monotone, near-linear inputs</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>Features with Moderate or Contextual Signal</h4>
+<table>
+  <thead><tr><th>Feature</th><th>Note</th></tr></thead>
+  <tbody>
+    <tr><td><code>total_sold</code>, <code>rental_ratio</code></td><td>Estate turnover / rental mix; useful in some folds, noisy in others</td></tr>
+    <tr><td><code>block_num</code></td><td>Block-within-street patterns — corner units, heritage blocks may carry premium</td></tr>
+    <tr><td><code>tranc_month_sin/cos</code></td><td>Seasonal variation; smaller effect than structural features</td></tr>
+    <tr><td><code>Latitude</code>, <code>Longitude</code></td><td>Raw GPS; partially superseded by explicit engineered geography features</td></tr>
+    <tr><td><code>max_floor_lvl</code></td><td>Proxy for building era; correlated with <code>flat_type</code></td></tr>
+  </tbody>
+</table>
+
+<div class="warning"><p><strong>Key insight: why engineered features help boosting but not RF.</strong> RF v1 scored $25,943 with raw features. Adding engineered features <em>worsened</em> RF to $27,582 (v2) because RF already implicitly captures lat/lon interactions through coordinate splits. The same features gave XGBoost a –$4,781 improvement (v3 vs v1). Gradient boosting benefits from explicit, linearised signals; RF builds implicit non-linear interactions naturally.</p></div>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════ Section 4 -->
+<h2 id="models">4. Training Methods &amp; Models</h2>
+
+<h3>4.1 Model Evolution</h3>
+
+<table>
+  <thead><tr><th>Ver.</th><th>Model(s)</th><th>Key change</th><th>Kaggle RMSE</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>v1</td><td>Random Forest</td><td>Baseline, raw features</td><td>$25,943</td><td><span class="version-badge vb-good">submitted</span></td></tr>
+    <tr><td>v2</td><td>RF + Feature Engineering</td><td>9 engineered features added</td><td>$27,582</td><td><span class="version-badge vb-bad">worse</span></td></tr>
+    <tr><td>v3</td><td>XGBoost (tuned)</td><td>Switched to gradient boosting</td><td>$22,801</td><td><span class="version-badge vb-good">–$4,781</span></td></tr>
+    <tr><td>v4</td><td>LightGBM (default)</td><td>Different architecture, untuned</td><td>$24,952</td><td><span class="version-badge vb-bad">worse</span></td></tr>
+    <tr><td>v5</td><td>45% XGB + 55% LGBM blend</td><td>Fixed-ratio blending</td><td>$22,428</td><td><span class="version-badge vb-good">–$524</span></td></tr>
+    <tr><td>v6</td><td>XGB+LGBM blend, log target, OOF encoding</td><td>Log transform + leakage fix</td><td>$22,124</td><td><span class="version-badge vb-good">–$304</span></td></tr>
+    <tr><td>v7</td><td>Ridge stack on XGB+LGBM OOF</td><td>OOF stacking meta-model</td><td>$21,906</td><td><span class="version-badge vb-good">–$218</span></td></tr>
+    <tr><td>v8</td><td>Ridge stack on XGB+LGBM+ET OOF</td><td>Added ExtraTrees (bagging)</td><td>$21,805</td><td><span class="version-badge vb-good">–$101</span></td></tr>
+    <tr><td><strong>v9</strong></td><td><strong>Ridge stack on XGB+LGBM+ET OOF</strong></td><td><strong>Richer OOF encoding + wider search</strong></td><td><strong>$21,756</strong></td><td><span class="version-badge vb-best">best</span></td></tr>
+  </tbody>
+</table>
+
+<h3>4.2 Final Stack Architecture (v9)</h3>
+
+<div class="arch-box">150,634 training rows
+│
+├── 5-Fold KFold (shuffle=True, random_state=42)
+│   ├── [Fold 1/5] train on folds 2–5 → predict fold 1
+│   ├── [Fold 2/5] train on folds 1,3–5 → predict fold 2
+│   ├── [Fold 3/5] train on folds 1,2,4,5 → predict fold 3
+│   ├── [Fold 4/5] train on folds 1–3,5 → predict fold 4
+│   └── [Fold 5/5] train on folds 1–4 → predict fold 5
+│
+├── Base model 1: XGBoost  ─────────── xgb_oof  (150,634,)
+├── Base model 2: LightGBM ─────────── lgbm_oof (150,634,)
+└── Base model 3: ExtraTrees ──────────  et_oof  (150,634,)
+         │
+         ▼
+Ridge meta-learner trained on [xgb_oof, lgbm_oof, et_oof]
+         │
+         ▼
+0.3854 × XGB + 0.4824 × LGBM + 0.1347 × ET − 0.0318
+         │
+         ▼
+Test predictions (averaged over 5 folds) → expm1() → submission</div>
+
+<h3>4.3 Base Model Configurations (v9)</h3>
+
+<h4>XGBoost — Gradient Boosting (level-wise growth)</h4>
+<p>Tuned via <strong>RandomizedSearchCV, 40 trials, 3-fold inner CV</strong>.</p>
+<table>
+  <thead><tr><th>Parameter</th><th>Best value</th><th>What it controls</th></tr></thead>
+  <tbody>
+    <tr><td><code>n_estimators</code></td><td>2000</td><td>Number of sequential trees</td></tr>
+    <tr><td><code>max_depth</code></td><td>7</td><td>Maximum depth per tree</td></tr>
+    <tr><td><code>learning_rate</code></td><td>0.05</td><td>Shrinkage per boosting round</td></tr>
+    <tr><td><code>subsample</code></td><td>0.9</td><td>Row fraction sampled per tree</td></tr>
+    <tr><td><code>colsample_bytree</code></td><td>0.4</td><td>Feature fraction per tree</td></tr>
+    <tr><td><code>min_child_weight</code></td><td>7</td><td>Min data per leaf — controls overfitting</td></tr>
+    <tr><td><code>reg_alpha</code></td><td>0.01</td><td>L1 regularisation on leaf weights</td></tr>
+    <tr><td><code>reg_lambda</code></td><td>1.5</td><td>L2 regularisation on leaf weights</td></tr>
+    <tr><td colspan="2"><strong>Val RMSE: $21,730</strong></td><td>Individual model performance</td></tr>
+  </tbody>
+</table>
+
+<h4>LightGBM — Gradient Boosting (leaf-wise growth)</h4>
+<p>Tuned via <strong>RandomizedSearchCV, 40 trials, 3-fold inner CV</strong>.</p>
+<table>
+  <thead><tr><th>Parameter</th><th>Best value</th><th>What it controls</th></tr></thead>
+  <tbody>
+    <tr><td><code>n_estimators</code></td><td>1000</td><td>Number of trees</td></tr>
+    <tr><td><code>max_depth</code></td><td>12</td><td>Maximum depth</td></tr>
+    <tr><td><code>num_leaves</code></td><td>300</td><td>Key capacity control for leaf-wise growth</td></tr>
+    <tr><td><code>learning_rate</code></td><td>0.03</td><td>Shrinkage</td></tr>
+    <tr><td><code>subsample</code></td><td>0.8</td><td>Row sampling</td></tr>
+    <tr><td><code>colsample_bytree</code></td><td>0.5</td><td>Feature sampling</td></tr>
+    <tr><td><code>min_child_samples</code></td><td>20</td><td>Min samples per leaf</td></tr>
+    <tr><td colspan="2"><strong>Val RMSE: $21,541</strong></td><td>Best single model in the stack</td></tr>
+  </tbody>
+</table>
+
+<h4>ExtraTrees — Bagging (parallel, random split thresholds)</h4>
+<p>Tuned via <strong>RandomizedSearchCV, 15 trials, 3-fold inner CV</strong>.</p>
+<table>
+  <thead><tr><th>Parameter</th><th>Best value</th><th>What it controls</th></tr></thead>
+  <tbody>
+    <tr><td><code>n_estimators</code></td><td>300</td><td>Number of parallel trees</td></tr>
+    <tr><td><code>max_depth</code></td><td>20</td><td>Capped (None = 30+ min fit on 150K rows)</td></tr>
+    <tr><td><code>min_samples_split</code></td><td>10</td><td>Min samples to attempt a split</td></tr>
+    <tr><td><code>min_samples_leaf</code></td><td>1</td><td>Min samples per leaf</td></tr>
+    <tr><td><code>max_features</code></td><td>0.8</td><td>Feature fraction considered per split</td></tr>
+    <tr><td colspan="2"><strong>Val RMSE: $23,238</strong></td><td>Weakest solo model, contributes diversity</td></tr>
+  </tbody>
+</table>
+
+<h3>4.4 Ridge Meta-Model Coefficients (v9)</h3>
+
+<p>Ridge sweeps regularisation strength to find the best-weighted combination of the 3 OOF predictions:</p>
+
+<table>
+  <thead><tr><th>Alpha</th><th>OOF RMSE</th><th>XGB coef</th><th>LGBM coef</th><th>ET coef</th></tr></thead>
+  <tbody>
+    <tr><td>0.001</td><td>$21,627</td><td>0.3854</td><td>0.4824</td><td>0.1347</td></tr>
+    <tr><td>0.010</td><td>$21,627</td><td>0.3854</td><td>0.4823</td><td>0.1348</td></tr>
+    <tr><td>0.100</td><td>$21,627</td><td>0.3858</td><td>0.4815</td><td>0.1352</td></tr>
+    <tr><td>1.000</td><td>$21,628</td><td>0.3891</td><td>0.4744</td><td>0.1390</td></tr>
+    <tr><td>10.00</td><td>$21,632</td><td>0.3983</td><td>0.4346</td><td>0.1696</td></tr>
+    <tr><td>100.0</td><td>$21,686</td><td>0.3666</td><td>0.3673</td><td>0.2670</td></tr>
+    <tr style="background:#ecfdf5"><td><strong>Best: 0.001</strong></td><td><strong>$21,627</strong></td><td><strong>0.3854</strong></td><td><strong>0.4824</strong></td><td><strong>0.1347</strong></td></tr>
+  </tbody>
+</table>
+
+<div class="highlight"><p>All 3 coefficients are positive and &gt;0.10, confirming each base model contributes genuine, non-redundant signal to the final prediction. If ET's coefficient were near zero, it would mean it adds no value beyond what XGB+LGBM already predict — but 0.1347 confirms diversity is real.</p></div>
+
+<h3>4.5 Individual Model OOF Performance (v9)</h3>
+
+<table>
+  <thead><tr><th>Model</th><th>OOF RMSE (mean)</th><th>Fold 1</th><th>Fold 2</th><th>Fold 3</th><th>Fold 4</th><th>Fold 5</th></tr></thead>
+  <tbody>
+    <tr><td>XGBoost</td><td>$21,904</td><td>$21,606</td><td>$22,362</td><td>$21,767</td><td>$21,929</td><td>$21,848</td></tr>
+    <tr><td>LightGBM</td><td>$21,803</td><td>$21,486</td><td>$22,291</td><td>$21,611</td><td>$21,882</td><td>$21,739</td></tr>
+    <tr><td>ExtraTrees</td><td>$23,587</td><td>$23,204</td><td>$23,970</td><td>$23,518</td><td>$23,692</td><td>$23,553</td></tr>
+    <tr><td>Equal-weight blend</td><td>$21,757</td><td colspan="5">—</td></tr>
+    <tr style="background:#ecfdf5"><td><strong>Ridge meta (v9)</strong></td><td><strong>$21,627</strong></td><td colspan="5">—</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════ Section 5 -->
+<h2 id="validation">5. Validation Strategy</h2>
+
+<h3>5.1 Cross-Validation Design</h3>
+
+<p><strong>5-Fold KFold</strong> — <code>KFold(n_splits=5, shuffle=True, random_state=42)</code></p>
+<ul>
+  <li>Dataset is randomly shuffled once, then split into 5 equal folds (~30,127 rows each)</li>
+  <li>Each fold serves as validation exactly once; the model trains on the remaining 4 folds</li>
+  <li>KFold (not StratifiedKFold) — regression target does not need stratification</li>
+  <li><code>random_state=42</code> ensures reproducibility across all versions</li>
+</ul>
+
+<h3>5.2 Out-of-Fold (OOF) Predictions</h3>
+
+<p>OOF predictions are the backbone of honest stacking:</p>
+
+<pre><code>For each fold i of 5:
+   1. Train base model on rows NOT in fold i
+   2. Predict rows IN fold i
+   → store in oof_predictions[fold_i_indices]
+
+After all 5 folds:
+   oof_predictions.shape = (150,634,)
+   Each row's prediction was made by a model that NEVER trained on it</code></pre>
+
+<p>This "never trained on the row being predicted" property makes OOF predictions honest — using them to train Ridge prevents the meta-model from seeing artificially easy (memorised) predictions.</p>
+
+<h3>5.3 OOF Target Encoding — Preventing Feature Leakage</h3>
+
+<p>Computing <code>town_median_price = median(resale_price per town)</code> on the full training set is leakage: each row's encoding partially reflects its own label. This inflated CV scores (v5 gap was $858).</p>
+
+<p><strong>OOF fix (v6+):</strong> For each of the 5 folds, the median map is computed from the other 4 folds only.</p>
+
+<pre><code>for tr_idx, va_idx in kf.split(groups):
+    fold_map = {g: median(y[tr_idx] for group g)}
+    encoded[va_idx] = fold_map[groups[va_idx]]  # val row's price excluded</code></pre>
+
+<div class="warning"><p><strong>Double OOF (v7+):</strong> Inside the stacking OOF loop, the three group encodings are <em>re-computed</em> from each fold's training rows — preventing leakage at the stacking stage too. This is why the v6→v7 CV–Kaggle gap collapsed from $306 → $65.</p></div>
+
+<h3>5.4 Hyperparameter Tuning Validation</h3>
+
+<p>RandomizedSearchCV uses an <strong>inner 3-fold CV</strong> inside each trial:</p>
+<ul>
+  <li>Outer loop: 5-fold KFold (model evaluation)</li>
+  <li>Inner loop: 3-fold CV inside RandomizedSearchCV (hyperparameter selection)</li>
+  <li>Search budget: 40 trials for XGB/LGBM (v9), 15 trials for ET</li>
+</ul>
+
+<p>Custom scoring forces the search to directly optimise dollar-RMSE (not log-space RMSE):</p>
+
+<pre><code>def neg_dollar_rmse(y_log_true, y_log_pred):
+    return -sqrt(MSE(expm1(y_log_true), expm1(y_log_pred)))</code></pre>
+
+<h3>5.5 CV–Kaggle Gap Tracking</h3>
+
+<p>The gap between OOF RMSE and Kaggle RMSE measures generalisation quality:</p>
+
+<table>
+  <thead><tr><th>Version</th><th>OOF RMSE</th><th>Kaggle RMSE</th><th>Gap</th><th>Interpretation</th></tr></thead>
+  <tbody>
+    <tr><td>v5</td><td>$21,570</td><td>$22,428</td><td style="color:#dc2626"><strong>$858</strong></td><td>Large — target leakage inflated OOF score</td></tr>
+    <tr><td>v6</td><td>$21,818</td><td>$22,124</td><td style="color:#d97706"><strong>$306</strong></td><td>Leakage fixed — gap collapsed after OOF encoding</td></tr>
+    <tr><td>v7</td><td>$21,841</td><td>$21,906</td><td style="color:#059669"><strong>$65</strong></td><td>Excellent — OOF stacking generalises very well</td></tr>
+    <tr><td>v8</td><td>$21,708</td><td>$21,805</td><td style="color:#059669"><strong>$97</strong></td><td>Healthy — slight increase with added model complexity</td></tr>
+    <tr><td>v9</td><td>$21,627</td><td>$21,756</td><td style="color:#059669"><strong>$129</strong></td><td>Healthy — richer features added some variance</td></tr>
+  </tbody>
+</table>
+
+<blockquote><p><strong>Rule of thumb:</strong> Gap &lt; $300 = well-calibrated CV. Gap &lt; $100 = excellent generalisation. Gap &gt; $500 = investigate for leakage.</p></blockquote>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════ Section 6 -->
+<h2 id="results">6. Results Progression</h2>
+
+<h3>Full Version History</h3>
+
+<table>
+  <thead><tr><th>Ver.</th><th>Model</th><th>OOF RMSE</th><th>Kaggle RMSE</th><th>Gap</th><th>Δ vs prev</th></tr></thead>
+  <tbody>
+    <tr><td>v1</td><td>RF Baseline</td><td>$25,871</td><td>$25,943</td><td>$72</td><td>—</td></tr>
+    <tr><td>v2</td><td>RF + Feature Engineering</td><td>$26,564</td><td>$27,582</td><td>$1,018</td><td style="color:#dc2626">+$1,639 ↑</td></tr>
+    <tr><td>v3</td><td>XGBoost Tuned + FE</td><td>$22,748</td><td>$22,801</td><td>$53</td><td style="color:#059669"><strong>–$4,781 ↓</strong></td></tr>
+    <tr><td>v4</td><td>LightGBM Default + FE</td><td>$24,348</td><td>$24,952</td><td>$604</td><td style="color:#dc2626">+$2,151 ↑</td></tr>
+    <tr><td>v5</td><td>Blend 45% XGB + 55% LGBM</td><td>$21,570</td><td>$22,428</td><td>$858</td><td style="color:#059669">–$524 ↓</td></tr>
+    <tr><td>v6</td><td>Log target + OOF encoding</td><td>$21,818</td><td>$22,124</td><td>$306</td><td style="color:#059669">–$304 ↓</td></tr>
+    <tr><td>v7</td><td>Stack XGB+LGBM (Ridge)</td><td>$21,841</td><td>$21,906</td><td>$65</td><td style="color:#059669">–$218 ↓</td></tr>
+    <tr><td>v8</td><td>Stack XGB+LGBM+ET (Ridge)</td><td>$21,708</td><td>$21,805</td><td>$97</td><td style="color:#059669">–$101 ↓</td></tr>
+    <tr style="background:#fef9c3"><td><strong>v9</strong></td><td><strong>Wider grid + richer encoding</strong></td><td><strong>$21,627</strong></td><td><strong>$21,756</strong></td><td><strong>$129</strong></td><td style="color:#059669"><strong>–$49 ↓</strong></td></tr>
+  </tbody>
+</table>
+
+<h3>Improvement Inflection Points</h3>
+
+<h4>1. v2 → v3: Biggest single gain (–$4,781)</h4>
+<p>Switching from Random Forest to tuned XGBoost. The same feature set that hurt RF in v2 ($27,582 vs $25,943) gave XGBoost a dramatic improvement in v3. Gradient boosting explicitly leverages engineered features through sequential error-correction; RF builds implicit interactions naturally from raw coordinates.</p>
+
+<h4>2. v5 → v6: Leakage fix (–$304, gap $858 → $306)</h4>
+<p><code>town_median_price</code> was computed on the full training set in v5, causing target leakage that inflated CV scores while Kaggle scores lagged. OOF encoding and <code>log1p()</code> target transform in v6 fixed this: the gap collapsed from $858 to $306, confirming CV was genuinely misleading before.</p>
+
+<h4>3. v6 → v7: OOF stacking (–$218, gap $306 → $65)</h4>
+<p>Replacing fixed-ratio blending with Ridge meta-stacking on OOF predictions collapsed the CV–Kaggle gap to $65 — the best generalisation in the project. The meta-model learns adaptive weights rather than applying the same XGB/LGBM ratio across all predictions.</p>
+
+<h4>4. v7 → v8: Bagging diversity (–$101)</h4>
+<p>Adding ExtraTrees (random split thresholds, parallel tree construction) to the stack brought fundamentally different errors from the two boosting models. Ridge assigned it a 22% weight despite it being weaker individually ($23,587 OOF vs $21,841 stack). Model diversity is more valuable than raw model accuracy.</p>
+
+<h4>5. v8 → v9: Richer OOF encoding (–$49)</h4>
+<p>Replacing 9,125-level ordinal-encoded <code>postal</code> with 598-level <code>postal_sector_median_price</code> (OOF median) gave trees a clean geographic price signal. Block and flat model OOF encodings added further signal at finer granularity.</p>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════ Section 7 -->
+<h2 id="learnings">7. Key Learnings &amp; Conclusions</h2>
+
+<h3>Algorithm Choice Matters More Than Feature Engineering</h3>
+<p>The single largest improvement (–$4,781) came from switching RF → XGBoost, not from adding features. The same features that made RF worse (+$1,639 in v2) gave XGBoost a –$4,781 boost in v3. The lesson: match the model family to the feature representation. Explicit, linearised signals (dist_to_cbd, remaining_lease) benefit gradient boosting far more than Random Forest.</p>
+
+<h3>Target Leakage Is Measurable and Fixable</h3>
+<p>The $858 CV–Kaggle gap in v5 was a precise, quantifiable signal of target encoding leakage. After the OOF fix in v6, the gap fell to $306. This makes gap analysis a reliable diagnostic — when CV and Kaggle diverge significantly, investigate target-encoded features first.</p>
+
+<h3>OOF Stacking Generalises Better Than Fixed Blending</h3>
+<p>The Ridge meta-learner learns context-sensitive blend weights from OOF predictions rather than applying a fixed ratio. The gap collapse from $306 → $65 (v6 → v7) confirms the meta-model is not overfitting: it generalised immediately to unseen Kaggle data at near-perfect fidelity.</p>
+
+<h3>Model Diversity Beats Model Strength</h3>
+<p>ExtraTrees (individual OOF RMSE $23,587) earned a positive 0.1347 coefficient in the v9 Ridge meta-model. This confirms it adds genuine signal that XGBoost and LightGBM together do not. The diversity is architectural: bagging with random split thresholds vs sequential boosting with optimised thresholds.</p>
+
+<h3>Geographic Granularity Is High Value</h3>
+<p>The shift from 26-group town encoding to 598-group postal sector encoding was the single largest change in v9. Singapore's housing market is hyper-local — resale prices within one town can vary by $200K+ across postal sectors. Finer geographic features are among the highest-value improvements available.</p>
+
+<h3>Remaining Path to Close the $289 Gap</h3>
+<table>
+  <thead><tr><th>Approach</th><th>Expected gain</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Optuna Bayesian HPO</td><td>–$50 to –$150</td><td>100 Optuna trials ≈ 300 random trials; smarter exploration of high-dimensional parameter space</td></tr>
+    <tr><td>CatBoost as 4th base model</td><td>–$50 to –$100</td><td>Native categorical handling; different tree architecture adds further diversity</td></tr>
+    <tr><td>Interaction price encodings (flat type × sector)</td><td>–$20 to –$80</td><td>5-room in Queenstown sector differs from 2-room in same sector by $300K+</td></tr>
+    <tr><td>Temporal features (year × sector trend)</td><td>–$20 to –$50</td><td>Price appreciation rates differ significantly by location</td></tr>
+  </tbody>
+</table>
+
+<div class="highlight"><p><strong>Bottom line:</strong> The project evolved from a $25,943 RF baseline to a $21,756 three-model Ridge stack by systematically applying: better algorithms, explicit feature engineering, leakage prevention, and model diversity. Each improvement was measurable, interpretable, and driven by the CV–Kaggle gap as a calibration signal.</p></div>
+
+<hr>
+<p style="color:#9ca3af; font-size:0.85em; text-align:center;">NTU SCTP Advanced Certificate in DSAI · Module 3.4 · Team 3 · Generated 2026-04-26</p>
+
+</body>
+</html>
