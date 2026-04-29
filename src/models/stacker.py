@@ -117,3 +117,43 @@ def run_stacking(X, y, X_test, train_fe, test_fe, config, n_splits=5, random_sta
         'test_preds':  test_preds,
         'fold_scores': fold_scores,
     }
+
+
+def retrain_full_data(X, y, X_test, train_fe, encode_pairs, full_maps,
+                      global_price_med, config):
+    """
+    Retrain all active base models on 100% of training data.
+
+    Replaces OOF-encoded price columns in X with full-training-set maps so both
+    train and test use the same encoding — valid here because Ridge weights are
+    already fixed from the OOF step and these predictions are only used for the
+    final test submission.
+
+    Returns dict: {model_name: test_predictions (log-space)}
+    """
+    active    = config['models'].get('active', ['xgb', 'lgbm', 'et', 'catboost'])
+    model_cfg = config['models']
+    y_log     = np.log1p(y)
+
+    # Replace per-fold OOF price cols with full-training-set maps
+    X_full = X.copy()
+    for group_col, price_col, _ in encode_pairs:
+        X_full[price_col] = (
+            train_fe[group_col].map(full_maps[group_col]).fillna(global_price_med).values
+        )
+
+    # Fit a fresh preprocessor on all training data, then transform both splits
+    preprocessor = _build_preprocessor(X_full)
+    preprocessor.fit(X_full)
+    Xf_arr = preprocessor.transform(X_full)
+    Xt_arr = preprocessor.transform(X_test)
+
+    test_preds = {}
+    print('\nRetraining on 100% of data...')
+    for m in active:
+        model = _build_model(m, dict(model_cfg[m]))
+        model.fit(Xf_arr, y_log)
+        test_preds[m] = model.predict(Xt_arr)
+        print(f'  {m} done')
+
+    return test_preds  # log-space — pass through existing Ridge meta-model

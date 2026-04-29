@@ -62,4 +62,5 @@ def ridge_blend(oof_preds, y, test_preds, alphas=None):
         'weights':    weights,
         'best_alpha': best_alpha,
         'oof_rmse':   best_rmse,
+        'model':      best_model,   # fitted Ridge — reused for 100% retrain predictions
     }

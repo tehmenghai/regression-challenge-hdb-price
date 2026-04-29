@@ -1,13 +1,19 @@
 import os
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import mlflow
+
+# Always store mlflow.db at the project root regardless of where the notebook runs from
+_PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+_TRACKING_URI  = f"sqlite:///{_PROJECT_ROOT}/mlflow.db"
+mlflow.set_tracking_uri(_TRACKING_URI)
 
 from src.features.feature_engineering import (
     engineer_features, DROP_COLS, SOLD_COLS, RENTAL_COLS
 )
 from src.features.oof_encoding import apply_global_oof_encodings
-from src.models.stacker import run_stacking
+from src.models.stacker import run_stacking, retrain_full_data
 from src.models.meta import ridge_blend
 
 
@@ -48,8 +54,9 @@ def run_pipeline(CONFIG):
             n_splits     — number of folds (default 5)
             random_state — random seed (default 42)
         output:
-            submission_path — where to save the submission CSV
-            sample_path     — (optional) path to sample_sub_reg.csv for row ordering
+            submission_path          — OOF-averaged submission CSV (always saved)
+            fulldata_submission_path — (optional) 100% retrain submission CSV
+            sample_path              — (optional) path to sample_sub_reg.csv for row ordering
 
     Returns dict: oof_rmse, weights, best_alpha, fold_scores
     """
@@ -80,7 +87,7 @@ def run_pipeline(CONFIG):
         n_splits         = CONFIG['cv'].get('n_splits', 5)
         cv_seed          = CONFIG['cv'].get('random_state', 42)
 
-        apply_global_oof_encodings(
+        full_maps = apply_global_oof_encodings(
             train_fe, y, test_fe, encode_pairs,
             global_price_med, n_splits=n_splits, random_state=cv_seed
         )
@@ -133,7 +140,34 @@ def run_pipeline(CONFIG):
         else:
             sub = pd.DataFrame({'Id': test_raw['id'], 'Predicted': blend['final_test']})
         sub.to_csv(out_path, index=False)
-        print(f'\nSubmission saved: {out_path}')
+        print(f'\nOOF submission saved: {out_path}')
+
+        # 7b. Optional 100% data retrain
+        fulldata_path = CONFIG['output'].get('fulldata_submission_path')
+        if fulldata_path:
+            full_test_preds = retrain_full_data(
+                X, y, X_test, train_fe, encode_pairs, full_maps,
+                global_price_med, CONFIG
+            )
+            # Column order must match how Ridge was trained — same as oof_preds key order
+            model_order  = list(stack['oof_preds'].keys())
+            meta_X_full  = np.column_stack([full_test_preds[m] for m in model_order])
+            final_pred_full = np.expm1(blend['model'].predict(meta_X_full))
+
+            os.makedirs(os.path.dirname(os.path.abspath(fulldata_path)), exist_ok=True)
+            if sample_path and os.path.exists(sample_path):
+                sub_full = (
+                    pd.DataFrame({'Id': test_raw['id'], 'Predicted': final_pred_full})
+                    .set_index('Id')
+                    .reindex(sample_sub['Id'])
+                    .reset_index()
+                )
+            else:
+                sub_full = pd.DataFrame(
+                    {'Id': test_raw['id'], 'Predicted': final_pred_full}
+                )
+            sub_full.to_csv(fulldata_path, index=False)
+            print(f'Full-data submission saved: {fulldata_path}')
 
         # 8. MLflow logging
         mlflow.log_params(_flatten_params(CONFIG))
@@ -143,6 +177,8 @@ def run_pipeline(CONFIG):
             mlflow.log_metric(f'{m}_oof_rmse', float(np.mean(scores)))
         for m, w in blend['weights'].items():
             mlflow.log_metric(f'{m}_weight', w)
+        if fulldata_path:
+            mlflow.log_param('fulldata_submission', fulldata_path)
 
         print(f'\n{"=" * 60}')
         print(f'OOF RMSE:      ${blend["oof_rmse"]:,.0f}')
