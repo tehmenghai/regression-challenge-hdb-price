@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pipeline Automation — Config-Driven Training Guide</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 24px 80px; color: #1a1a1a; line-height: 1.7; background: #fafafa; }
+  h1 { font-size: 2rem; color: #1a1a1a; border-bottom: 3px solid #0369a1; padding-bottom: 12px; }
+  h2 { font-size: 1.4rem; color: #0369a1; margin-top: 48px; border-left: 4px solid #0369a1; padding-left: 12px; }
+  h3 { font-size: 1.1rem; color: #374151; margin-top: 28px; }
+  h4 { font-size: 1rem; color: #6b7280; margin-top: 20px; }
+  code { background: #1e293b; color: #e2e8f0; padding: 2px 7px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.88em; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 20px 24px; border-radius: 8px; overflow-x: auto; font-size: 0.88em; line-height: 1.6; margin: 16px 0; }
+  pre code { background: none; padding: 0; color: inherit; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.93em; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  th { background: #0369a1; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  blockquote { background: #eff6ff; border-left: 4px solid #0369a1; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #1e3a5f; }
+  blockquote p { margin: 0; }
+  .highlight { background: #ecfdf5; border-left: 4px solid #059669; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #065f46; }
+  .highlight p { margin: 0; }
+  .warning { background: #fffbeb; border-left: 4px solid #f59e0b; margin: 20px 0; padding: 14px 20px; border-radius: 0 8px 8px 0; color: #78350f; }
+  .warning p { margin: 0; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 6px 0; }
+  .badge { display: inline-block; background: #0369a1; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; margin-right: 6px; vertical-align: middle; font-family: 'Courier New', monospace; }
+  .badge-green  { background: #059669; }
+  .badge-orange { background: #d97706; }
+  .badge-gray   { background: #64748b; }
+  .score-box { background: white; border: 2px solid #0369a1; border-radius: 12px; padding: 20px 28px; margin: 24px 0; display: flex; gap: 40px; flex-wrap: wrap; }
+  .score-item { text-align: center; }
+  .score-label { font-size: 0.82em; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .score-value { font-size: 1.6rem; font-weight: 700; color: #0369a1; }
+  .score-delta { font-size: 0.88em; color: #059669; font-weight: 600; }
+  .arch-box { background: #1e293b; color: #e2e8f0; border-radius: 10px; padding: 24px 28px; font-family: 'Courier New', monospace; font-size: 0.88em; line-height: 1.8; margin: 20px 0; }
+  .arch-box .comment { color: #94a3b8; }
+  .arch-box .highlight-line { color: #86efac; font-weight: bold; }
+  .step-grid { display: grid; grid-template-columns: 48px 1fr; gap: 0 16px; margin: 24px 0; }
+  .step-num { width: 48px; height: 48px; background: #0369a1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0; margin-top: 4px; }
+  .step-body { padding-bottom: 28px; border-left: 2px solid #e2e8f0; padding-left: 20px; margin-left: -4px; }
+  .step-body h3 { margin-top: 4px; }
+  .config-key { color: #86efac; }
+  .config-val { color: #fcd34d; }
+  .config-comment { color: #94a3b8; }
+  .flow-box { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px; margin: 20px 0; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .flow-arrow { text-align: center; color: #0369a1; font-size: 1.5rem; margin: 6px 0; }
+  .flow-step { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px 16px; margin: 8px 0; font-size: 0.92em; }
+  .flow-step.optional { background: #f0fdf4; border-color: #bbf7d0; }
+  .flow-step .label { font-weight: 700; color: #0369a1; }
+  .flow-step.optional .label { color: #059669; }
+</style>
+<script src="nav.js"></script>
+</head>
+<body>
+
+<h1>Pipeline Automation &mdash; Config-Driven Training Guide<br>
+<small style="font-size:0.52em;color:#6b7280;">How to run a new experiment by editing only one dict</small></h1>
+
+<div class="score-box">
+  <div class="score-item">
+    <div class="score-label">Verified OOF RMSE</div>
+    <div class="score-value">$21,552</div>
+    <div class="score-delta">Matches v16 exactly</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Boilerplate eliminated</div>
+    <div class="score-value">~400</div>
+    <div class="score-delta">lines per notebook</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Files to edit per experiment</div>
+    <div class="score-value">1</div>
+    <div class="score-delta">CONFIG dict only</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">MLflow tracking</div>
+    <div class="score-value">Auto</div>
+    <div class="score-delta">params + metrics logged</div>
+  </div>
+</div>
+
+<hr />
+
+<h2 id="why-we-built-this">Why We Built This</h2>
+
+<p>By v17, we had 17+ experiment notebooks. Every new notebook started with a copy-paste of ~400 lines of identical boilerplate: loading data, engineering features, running the OOF stacking loop, blending with Ridge, and saving the CSV.</p>
+
+<p>The problem: to test a new hyperparameter or a new OOF feature, you had to:</p>
+<ol>
+  <li>Copy the entire notebook</li>
+  <li>Find the right cell and edit a dict buried in the middle</li>
+  <li>Hope you didn't accidentally change something else</li>
+  <li>Re-run all 400+ lines of code</li>
+</ol>
+
+<p>After v17, we extracted all the boilerplate into reusable <code>src/</code> modules. Now each new experiment is a <strong>3-cell notebook</strong>. You only touch Cell 1.</p>
+
+<hr />
+
+<h2 id="architecture">Architecture &mdash; What Lives Where</h2>
+
+<div class="arch-box"><pre style="background:none;padding:0;margin:0;color:inherit;font-size:inherit;line-height:inherit;"><span class="highlight-line">src/</span>
+  <span class="highlight-line">features/</span>
+    feature_engineering.py   <span class="comment">&larr; engineer_features() + all constants</span>
+    oof_encoding.py           <span class="comment">&larr; OOF group median target encoding</span>
+  <span class="highlight-line">models/</span>
+    stacker.py                <span class="comment">&larr; 5-fold OOF stacking loop (4 base models)</span>
+    meta.py                   <span class="comment">&larr; Ridge meta-learner with alpha sweep</span>
+  <span class="highlight-line">pipeline.py</span>               <span class="comment">&larr; run_pipeline(CONFIG) &mdash; orchestrates everything</span>
+
+<span class="highlight-line">notebooks/experiments/</span>
+  template_experiment.ipynb  <span class="comment">&larr; copy this for every new experiment</span>
+  18_v16_pipeline_test.ipynb <span class="comment">&larr; verified: reproduces v16 OOF $21,552 exactly</span>
+
+<span class="highlight-line">mlflow.db</span>                   <span class="comment">&larr; all experiment runs auto-logged here (project root)</span></pre></div>
+
+<p>The rule is simple: <strong>all reusable logic lives in <code>src/</code></strong>. The notebook only holds your experiment-specific CONFIG dict. You never edit <code>src/</code> files to run a new experiment — you only change the CONFIG.</p>
+
+<hr />
+
+<h2 id="the-config-dict">The CONFIG Dict &mdash; Every Key Explained</h2>
+
+<p>The entire experiment is controlled by one Python dictionary. Here is the full CONFIG with every key annotated:</p>
+
+<pre><code>CONFIG = {
+    <span style="color:#86efac">"experiment_name"</span>: <span style="color:#fcd34d">"v18"</span>,  <span style="color:#94a3b8"># Label for MLflow. Change this every run.</span>
+
+    <span style="color:#86efac">"data"</span>: {
+        <span style="color:#94a3b8"># Paths are relative to the notebook location (notebooks/experiments/)</span>
+        <span style="color:#86efac">"train_path"</span>: <span style="color:#fcd34d">"../../data/raw/train.csv"</span>,
+        <span style="color:#86efac">"test_path"</span>:  <span style="color:#fcd34d">"../../data/raw/test.csv"</span>,
+    },
+
+    <span style="color:#86efac">"features"</span>: {
+        <span style="color:#94a3b8"># OOF target encodings &mdash; each tuple adds one new column to X</span>
+        <span style="color:#94a3b8"># Format: (group_column, new_feature_name, min_group_count)</span>
+        <span style="color:#86efac">"encode_pairs"</span>: [
+            (<span style="color:#fcd34d">"town"</span>,           <span style="color:#fcd34d">"town_median_price"</span>,           1),
+            (<span style="color:#fcd34d">"postal_sector"</span>,  <span style="color:#fcd34d">"postal_sector_median_price"</span>,  1),
+            (<span style="color:#fcd34d">"flat_model"</span>,     <span style="color:#fcd34d">"flat_model_median_price"</span>,     1),
+            (<span style="color:#fcd34d">"town_flat_type"</span>, <span style="color:#fcd34d">"town_flat_type_median_price"</span>, 3),
+            (<span style="color:#fcd34d">"Tranc_Year"</span>,     <span style="color:#fcd34d">"year_median_price"</span>,           1),
+        ],
+        <span style="color:#94a3b8"># Extra columns to exclude from training (beyond the always-dropped set)</span>
+        <span style="color:#86efac">"drop_cols"</span>: [],
+    },
+
+    <span style="color:#86efac">"models"</span>: {
+        <span style="color:#94a3b8"># Remove a name to exclude that model from the stack entirely</span>
+        <span style="color:#86efac">"active"</span>: [<span style="color:#fcd34d">"xgb"</span>, <span style="color:#fcd34d">"lgbm"</span>, <span style="color:#fcd34d">"et"</span>, <span style="color:#fcd34d">"catboost"</span>],
+
+        <span style="color:#86efac">"xgb"</span>:      { ... },  <span style="color:#94a3b8"># XGBRegressor params</span>
+        <span style="color:#86efac">"lgbm"</span>:     { ... },  <span style="color:#94a3b8"># LGBMRegressor params</span>
+        <span style="color:#86efac">"et"</span>:       { ... },  <span style="color:#94a3b8"># ExtraTreesRegressor params</span>
+        <span style="color:#86efac">"catboost"</span>: { ... },  <span style="color:#94a3b8"># CatBoostRegressor params</span>
+        <span style="color:#86efac">"ridge_alphas"</span>: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0],
+    },
+
+    <span style="color:#86efac">"cv"</span>: {
+        <span style="color:#86efac">"n_splits"</span>: 5,      <span style="color:#94a3b8"># number of cross-validation folds</span>
+        <span style="color:#86efac">"random_state"</span>: 42,  <span style="color:#94a3b8"># seed &mdash; keep fixed for reproducibility</span>
+    },
+
+    <span style="color:#86efac">"output"</span>: {
+        <span style="color:#94a3b8"># Always generated: OOF-averaged submission (honest score estimate)</span>
+        <span style="color:#86efac">"submission_path"</span>: <span style="color:#fcd34d">"../../outputs/submissions/sub_v18.csv"</span>,
+
+        <span style="color:#94a3b8"># Optional: uncomment to also generate a 100%-data retrain submission</span>
+        <span style="color:#94a3b8"># "fulldata_submission_path": "../../outputs/submissions/sub_v18_fulldata.csv",</span>
+
+        <span style="color:#86efac">"sample_path"</span>: <span style="color:#fcd34d">"../../outputs/submissions/sample_sub_reg.csv"</span>,
+    },
+}</code></pre>
+
+<hr />
+
+<h2 id="running-an-experiment">Running a New Experiment &mdash; Step by Step</h2>
+
+<div class="step-grid">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <h3>Copy the template notebook</h3>
+    <p>In Jupyter, right-click <code>template_experiment.ipynb</code> &rarr; Duplicate. Rename it with the next version number, e.g. <code>19_my_experiment.ipynb</code>.</p>
+    <p>Never edit <code>template_experiment.ipynb</code> directly &mdash; it stays as the clean starting point.</p>
+  </div>
+
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <h3>Edit Cell 1 only</h3>
+    <p>Change <code>experiment_name</code> to match your new notebook number. Then adjust whatever you want to test &mdash; hyperparameters, OOF features, or which models are active. See the sections below for specific examples.</p>
+    <div class="highlight"><p><strong>Rule:</strong> Cell 1 is the only cell you ever touch. Cells 2 and 3 are boilerplate &mdash; do not edit them.</p></div>
+  </div>
+
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <h3>Run All Cells</h3>
+    <p>In Jupyter: <strong>Kernel &rarr; Restart and Run All</strong> (or Shift+Enter through each cell). The pipeline will print progress as it runs &mdash; fold scores, Ridge alpha sweep, and final OOF RMSE.</p>
+    <p>Typical runtime: <strong>20&ndash;40 minutes</strong> for the full 4-model stack on 150K rows.</p>
+  </div>
+
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <h3>Check results in Cell 3</h3>
+    <p>Cell 3 prints the summary &mdash; OOF RMSE, Ridge weights, and per-model scores. The submission CSV is saved automatically to <code>outputs/submissions/</code>.</p>
+  </div>
+
+  <div class="step-num">5</div>
+  <div class="step-body">
+    <h3>Compare in MLflow</h3>
+    <p>Every run is automatically logged. Open the dashboard to compare this run against all previous experiments:</p>
+    <pre><code>conda activate ml
+cd "/Users/tehmenghai/SCTP-DSAI/Module 3/regression-challenge-hdb-price"
+mlflow ui --backend-store-uri sqlite:///mlflow.db</code></pre>
+    <p>Then open <strong>http://127.0.0.1:5000</strong> in your browser.</p>
+  </div>
+</div>
+
+<hr />
+
+<h2 id="what-to-change">What to Change &mdash; Common Experiments</h2>
+
+<h3 id="change-hyperparameters">Changing Hyperparameters</h3>
+
+<p>Find the model dict inside <code>CONFIG["models"]</code> and edit the values. Example: reduce XGB tree depth to test regularisation:</p>
+
+<pre><code><span style="color:#86efac">"xgb"</span>: {
+    <span style="color:#86efac">"n_estimators"</span>: 2000,
+    <span style="color:#86efac">"max_depth"</span>: <span style="color:#fcd34d">6</span>,   <span style="color:#94a3b8"># was 7 &mdash; testing shallower trees</span>
+    <span style="color:#86efac">"learning_rate"</span>: 0.05,
+    ...
+}</code></pre>
+
+<table>
+<thead><tr><th>Parameter</th><th>Model</th><th>What it controls</th><th>Try if&hellip;</th></tr></thead>
+<tbody>
+<tr><td><code>n_estimators</code></td><td>XGB / LGBM / CatBoost</td><td>Number of trees</td><td>OOF RMSE is still decreasing — add more trees</td></tr>
+<tr><td><code>max_depth</code></td><td>XGB / LGBM / ET</td><td>How deep each tree grows</td><td>OOF much better than Kaggle (overfitting) — reduce depth</td></tr>
+<tr><td><code>learning_rate</code></td><td>XGB / LGBM / CatBoost</td><td>Step size per tree</td><td>Lower rate + more trees often improves generalisation</td></tr>
+<tr><td><code>num_leaves</code></td><td>LGBM only</td><td>Max leaves per tree (key for LGBM)</td><td>Model underfitting — increase leaves</td></tr>
+<tr><td><code>subsample</code></td><td>XGB / LGBM</td><td>Fraction of rows sampled per tree</td><td>Overfitting — reduce to 0.7&ndash;0.8</td></tr>
+<tr><td><code>colsample_bytree</code></td><td>XGB / LGBM</td><td>Fraction of features sampled per tree</td><td>Many correlated features — reduce to 0.4&ndash;0.6</td></tr>
+<tr><td><code>iterations</code></td><td>CatBoost only</td><td>Number of trees (CatBoost name for n_estimators)</td><td>More budget available — increase to 1500+</td></tr>
+</tbody>
+</table>
+
+<h3 id="add-oof-feature">Adding a New OOF Target Encoding Feature</h3>
+
+<p>OOF target encoding replaces a categorical column with the median resale price of that group — computed from the other 4 folds to prevent leakage. To test a new grouping, add a tuple to <code>encode_pairs</code>:</p>
+
+<pre><code><span style="color:#86efac">"encode_pairs"</span>: [
+    (<span style="color:#fcd34d">"town"</span>,           <span style="color:#fcd34d">"town_median_price"</span>,           1),
+    (<span style="color:#fcd34d">"postal_sector"</span>,  <span style="color:#fcd34d">"postal_sector_median_price"</span>,  1),
+    (<span style="color:#fcd34d">"flat_model"</span>,     <span style="color:#fcd34d">"flat_model_median_price"</span>,     1),
+    (<span style="color:#fcd34d">"town_flat_type"</span>, <span style="color:#fcd34d">"town_flat_type_median_price"</span>, 3),
+    (<span style="color:#fcd34d">"Tranc_Year"</span>,     <span style="color:#fcd34d">"year_median_price"</span>,           1),
+    <span style="color:#94a3b8"># Add new encoding here:</span>
+    (<span style="color:#fcd34d">"storey_range"</span>,   <span style="color:#fcd34d">"storey_median_price"</span>,         5),
+],</code></pre>
+
+<p>The tuple format is: <code>(group_column, new_column_name, min_group_count)</code></p>
+<ul>
+  <li><strong>group_column</strong> — any column that exists in <code>train_fe</code> after feature engineering (even if it's later dropped from X)</li>
+  <li><strong>new_column_name</strong> — the name the new feature will have in the model's feature matrix</li>
+  <li><strong>min_group_count</strong> — groups with fewer than this many observations use the global median instead. Use 1 for large groups (town), 3&ndash;5 for smaller groups</li>
+</ul>
+
+<div class="warning"><p><strong>Leakage rule:</strong> The OOF encoding is recomputed inside each fold from training rows only. This means your new feature is always honest &mdash; no row influences its own encoding. This is handled automatically by the pipeline.</p></div>
+
+<h3 id="remove-oof-feature">Removing an OOF Feature</h3>
+
+<p>Simply delete (or comment out) a tuple from <code>encode_pairs</code>. The pipeline will re-run without that column. Useful for ablation testing — finding out which encodings are actually contributing.</p>
+
+<h3 id="exclude-feature">Excluding a Feature from Training</h3>
+
+<p>To drop a column that was added by feature engineering but you want to test without:</p>
+
+<pre><code><span style="color:#86efac">"drop_cols"</span>: [<span style="color:#fcd34d">"street_freq"</span>],  <span style="color:#94a3b8"># test without street frequency encoding</span></code></pre>
+
+<p>The column is still computed internally (needed for group lookups) but excluded from the feature matrix X that the models train on.</p>
+
+<h3 id="remove-model">Excluding a Base Model</h3>
+
+<p>Remove a name from <code>"active"</code> to drop it from the stack:</p>
+
+<pre><code><span style="color:#86efac">"active"</span>: [<span style="color:#fcd34d">"xgb"</span>, <span style="color:#fcd34d">"lgbm"</span>, <span style="color:#fcd34d">"catboost"</span>],  <span style="color:#94a3b8"># test 3-model stack without ET</span></code></pre>
+
+<p>Ridge will re-learn the optimal weights among the remaining models automatically.</p>
+
+<hr />
+
+<h2 id="oof-vs-fulldata">Two Submission Modes &mdash; OOF vs 100% Retrain</h2>
+
+<p>The pipeline always generates an OOF submission. You can optionally generate a 100% retrain submission on top of it.</p>
+
+<div class="flow-box">
+  <div class="flow-step">
+    <div class="label">Step 1 &mdash; 5-Fold OOF (always runs, ~20&ndash;40 min)</div>
+    Each model trains on 80% of data per fold &rarr; predicts on the remaining 20%.<br>
+    Ridge learns optimal blend weights from OOF predictions.<br>
+    <strong>Saves:</strong> <code>sub_v18.csv</code> (test predictions averaged across 5 folds)
+  </div>
+  <div class="flow-arrow">&darr; optional</div>
+  <div class="flow-step optional">
+    <div class="label">Step 2 &mdash; 100% Data Retrain (optional, +20&ndash;30 min)</div>
+    All 4 base models retrain on all 150K rows.<br>
+    <strong>Same Ridge weights</strong> as Step 1 &mdash; not retrained.<br>
+    <strong>Saves:</strong> <code>sub_v18_fulldata.csv</code> (typically $50&ndash;100 better on Kaggle)
+  </div>
+</div>
+
+<table>
+<thead><tr><th></th><th>OOF Submission</th><th>Full-Data Submission</th></tr></thead>
+<tbody>
+<tr><td><strong>Training data used</strong></td><td>80% per fold (5-fold CV)</td><td>100% of 150K rows</td></tr>
+<tr><td><strong>Ridge weights</strong></td><td>Fitted on OOF predictions</td><td>Same weights as OOF step</td></tr>
+<tr><td><strong>Kaggle score</strong></td><td>Honest estimate, slightly higher RMSE</td><td>Typically $50&ndash;100 better</td></tr>
+<tr><td><strong>When to use</strong></td><td>During experimentation (fast iteration)</td><td>For final Kaggle submission</td></tr>
+<tr><td><strong>How to enable</strong></td><td>Always on</td><td>Uncomment <code>fulldata_submission_path</code> in CONFIG</td></tr>
+</tbody>
+</table>
+
+<div class="highlight"><p><strong>Recommended workflow:</strong> Run OOF-only while iterating. When you find a config that beats your current best OOF RMSE, enable <code>fulldata_submission_path</code>, re-run the full notebook, and submit the <code>_fulldata.csv</code> file to Kaggle.</p></div>
+
+<p>To enable the 100% retrain, uncomment one line in CONFIG:</p>
+
+<pre><code><span style="color:#86efac">"output"</span>: {
+    <span style="color:#86efac">"submission_path"</span>:          <span style="color:#fcd34d">"../../outputs/submissions/sub_v18.csv"</span>,
+    <span style="color:#86efac">"fulldata_submission_path"</span>: <span style="color:#fcd34d">"../../outputs/submissions/sub_v18_fulldata.csv"</span>,
+    <span style="color:#86efac">"sample_path"</span>:             <span style="color:#fcd34d">"../../outputs/submissions/sample_sub_reg.csv"</span>,
+},</code></pre>
+
+<hr />
+
+<h2 id="mlflow">MLflow &mdash; Tracking All Experiments</h2>
+
+<p>Every time you run the pipeline, MLflow automatically logs:</p>
+<ul>
+  <li>All hyperparameters for every model</li>
+  <li>OOF RMSE for each base model (XGB, LGBM, ET, CatBoost)</li>
+  <li>Final blended OOF RMSE</li>
+  <li>Ridge coefficient (weight) for each model</li>
+  <li>Best Ridge alpha</li>
+  <li>Which OOF encoding pairs were used</li>
+</ul>
+
+<h3>Starting the MLflow UI</h3>
+<p>Open a terminal and run from the <strong>project root</strong>:</p>
+
+<pre><code>conda activate ml
+cd "/Users/tehmenghai/SCTP-DSAI/Module 3/regression-challenge-hdb-price"
+mlflow ui --backend-store-uri sqlite:///mlflow.db</code></pre>
+
+<p>Then open <strong>http://127.0.0.1:5000</strong> in your browser.</p>
+
+<div class="warning"><p><strong>Important:</strong> Always use <code>http://127.0.0.1:5000</code> — not <code>localhost:5000</code>. They should be equivalent, but <code>127.0.0.1</code> is more reliable. The flag <code>--backend-store-uri sqlite:///mlflow.db</code> is required; without it, MLflow will look for a <code>mlruns/</code> folder and show an empty page.</p></div>
+
+<h3>What You Can Do in the UI</h3>
+<ul>
+  <li><strong>Compare runs side-by-side</strong> — select multiple runs and click Compare</li>
+  <li><strong>Filter by metric</strong> — sort all runs by OOF RMSE to find the best config instantly</li>
+  <li><strong>See what changed</strong> — click any run to see every hyperparameter that was logged</li>
+  <li><strong>Track trends</strong> — the Chart view shows how OOF RMSE changed across runs</li>
+</ul>
+
+<hr />
+
+<h2 id="pipeline-flow">Full Pipeline Flow</h2>
+
+<p>This is exactly what happens inside <code>run_pipeline(CONFIG)</code> when you run Cell 2:</p>
+
+<div class="flow-box">
+  <div class="flow-step"><div class="label">1. Load Data</div>Reads <code>train.csv</code> (150,634 rows) and <code>test.csv</code> (16,737 rows)</div>
+  <div class="flow-arrow">&darr;</div>
+  <div class="flow-step"><div class="label">2. Feature Engineering</div>Calls <code>engineer_features()</code> &mdash; adds 23 columns: distances, cyclical months, interactions, lease features, storey ranks, postal sector, block number</div>
+  <div class="flow-arrow">&darr;</div>
+  <div class="flow-step"><div class="label">3. Global OOF Encodings</div>Adds OOF target-encoded price columns from <code>encode_pairs</code>. Train: cross-validated (no leakage). Test: full-training-set maps.</div>
+  <div class="flow-arrow">&darr;</div>
+  <div class="flow-step"><div class="label">4. Build Feature Matrix</div>Drops identifier columns, target, raw high-cardinality cols, and any <code>drop_cols</code>. Aligns X_test columns to match X.</div>
+  <div class="flow-arrow">&darr;</div>
+  <div class="flow-step"><div class="label">5. 5-Fold OOF Stacking</div>Per fold: recomputes encode_pairs from training rows &rarr; trains all active models &rarr; predicts OOF on validation rows and on test set. Prints per-fold RMSE table.</div>
+  <div class="flow-arrow">&darr;</div>
+  <div class="flow-step"><div class="label">6. Ridge Meta-Blend</div>Sweeps 6 alpha values &rarr; fits Ridge on OOF predictions &rarr; learns optimal blend weights. Prints alpha sweep table with coefficients.</div>
+  <div class="flow-arrow">&darr;</div>
+  <div class="flow-step"><div class="label">7. Save OOF Submission</div>Saves <code>submission_path</code> CSV (test predictions averaged across 5 folds)</div>
+  <div class="flow-arrow">&darr; if fulldata_submission_path set</div>
+  <div class="flow-step optional"><div class="label">7b. 100% Data Retrain (optional)</div>Retrains all base models on full 150K rows with full-data group maps &rarr; passes through existing Ridge weights &rarr; saves <code>fulldata_submission_path</code> CSV</div>
+  <div class="flow-arrow">&darr;</div>
+  <div class="flow-step"><div class="label">8. MLflow Logging</div>Logs all hyperparameters, OOF scores, Ridge weights, and best alpha to <code>mlflow.db</code></div>
+</div>
+
+<hr />
+
+<h2 id="verification">Verification &mdash; How We Know It Works</h2>
+
+<p>The pipeline was verified against the original v16 notebook (<code>16_catboost_stack.ipynb</code>). Running <code>18_v16_pipeline_test.ipynb</code> with identical CONFIG values reproduces every number exactly:</p>
+
+<table>
+<thead><tr><th>Metric</th><th>v16 Notebook</th><th>Pipeline Test</th><th>Match?</th></tr></thead>
+<tbody>
+<tr><td>OOF RMSE</td><td>$21,552</td><td>$21,552</td><td>&#9989;</td></tr>
+<tr><td>XGB weight</td><td>0.3431</td><td>0.3431</td><td>&#9989;</td></tr>
+<tr><td>LGBM weight</td><td>0.3673</td><td>0.3673</td><td>&#9989;</td></tr>
+<tr><td>ET weight</td><td>0.1198</td><td>0.1198</td><td>&#9989;</td></tr>
+<tr><td>CatBoost weight</td><td>0.1725</td><td>0.1725</td><td>&#9989;</td></tr>
+<tr><td>Fold 1 XGB RMSE</td><td>$21,510</td><td>$21,510</td><td>&#9989;</td></tr>
+<tr><td>Feature count</td><td>78 columns</td><td>78 columns</td><td>&#9989;</td></tr>
+<tr><td>Best Ridge alpha</td><td>0.001</td><td>0.001</td><td>&#9989;</td></tr>
+</tbody>
+</table>
+
+<hr />
+
+<h2 id="quick-reference">Quick Reference</h2>
+
+<table>
+<thead><tr><th>I want to&hellip;</th><th>Change this in CONFIG</th></tr></thead>
+<tbody>
+<tr><td>Test a new XGB learning rate</td><td><code>models.xgb.learning_rate</code></td></tr>
+<tr><td>Add a new OOF price signal</td><td>Append a tuple to <code>features.encode_pairs</code></td></tr>
+<tr><td>Remove an OOF signal to test its value</td><td>Delete the tuple from <code>features.encode_pairs</code></td></tr>
+<tr><td>Exclude a feature from training</td><td>Add column name to <code>features.drop_cols</code></td></tr>
+<tr><td>Run with only XGB + LGBM (no ET / CatBoost)</td><td><code>models.active: ["xgb", "lgbm"]</code></td></tr>
+<tr><td>Generate a 100% retrain submission</td><td>Uncomment <code>output.fulldata_submission_path</code></td></tr>
+<tr><td>Label the run differently in MLflow</td><td><code>experiment_name</code></td></tr>
+<tr><td>Change cross-validation seed</td><td><code>cv.random_state</code></td></tr>
+</tbody>
+</table>
+
+</body>
+</html>

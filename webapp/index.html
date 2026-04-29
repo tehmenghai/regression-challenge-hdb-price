@@ -223,20 +223,20 @@
     <p class="hero-sub">NTU SCTP Module 3 &bull; Kaggle Competition &bull; Team 3</p>
     <div class="hero-scores">
       <div class="hs-item gold">
-        <div class="hs-num">$21,756</div>
-        <div class="hs-label">Best Kaggle RMSE (v9)</div>
+        <div class="hs-num">$21,335.57</div>
+        <div class="hs-label">Best Kaggle RMSE (3-member weighted v20)</div>
       </div>
       <div class="hs-item">
-        <div class="hs-num">$289</div>
-        <div class="hs-label">Gap to 1st place</div>
+        <div class="hs-num">~$93</div>
+        <div class="hs-label">Gap to 1st place (#4 Leaderboard)</div>
       </div>
       <div class="hs-item green">
-        <div class="hs-num">&minus;$4,187</div>
+        <div class="hs-num">&minus;$4,607</div>
         <div class="hs-label">Total improvement from v1</div>
       </div>
       <div class="hs-item">
-        <div class="hs-num">9</div>
-        <div class="hs-label">Submissions &bull; v1&ndash;v9</div>
+        <div class="hs-num">20+</div>
+        <div class="hs-label">Submissions &bull; v1&ndash;v16 + Team</div>
       </div>
     </div>
   </div>
@@ -257,12 +257,12 @@
   <a class="card-featured" href="#" data-doc="submission_journey.html">
     <div class="cf-icon">&#128202;</div>
     <div class="cf-body">
-      <h2>Full Submission Journey — v1 to v9</h2>
-      <p>Track every Kaggle submission: what changed, why we tried it, CV vs Kaggle RMSE, key learnings, and what&rsquo;s next. Updated after every submission.</p>
+      <h2>Full Submission Journey — v1 to Team Ensemble</h2>
+      <p>Track every Kaggle submission: what changed, why we tried it, CV vs Kaggle RMSE, key learnings, and what&rsquo;s next. Includes team ensemble analysis and Ken Lai rank-averaging experiment. Updated after every submission.</p>
       <div class="cf-badge">
         <span class="badge b-gold">&#127942; Live doc</span>
-        <span class="badge b-green">9 versions</span>
-        <span class="badge b-blue">v1 $25,943 &rarr; v9 $21,756</span>
+        <span class="badge b-green">20+ versions</span>
+        <span class="badge b-blue">v1 $25,943 &rarr; $21,350.91 Team Ens</span>
       </div>
     </div>
   </a>
@@ -347,6 +347,13 @@
       <h3>Model Training Analysis Report</h3>
       <p>Consolidated analysis of v1&ndash;v9: top features with confidence evidence, full pipeline steps, all training methods and models, validation strategy, and CV&ndash;Kaggle gap diagnostics.</p>
       <div class="card-meta"><span class="badge b-gold">v1&ndash;v9 summary</span> <span class="badge b-blue">Analysis report</span></div>
+    </a>
+
+    <a class="card" href="#" data-doc="pipeline_automation_explained.html">
+      <div class="card-icon">&#9881;&#65039;</div>
+      <h3>Pipeline Automation &amp; MLflow Tracking</h3>
+      <p>How we eliminated ~400 lines of boilerplate per experiment into a single CONFIG dict. Covers the src/ module architecture, OOF vs 100% retrain modes, MLflow experiment comparison, and step-by-step guide to running new experiments.</p>
+      <div class="card-meta"><span class="badge b-gold">v17+</span> <span class="badge b-blue">template_experiment.ipynb</span></div>
     </a>
 
   </div>

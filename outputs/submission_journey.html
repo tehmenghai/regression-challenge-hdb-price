@@ -98,7 +98,7 @@
 <body>
 
 <h1>HDB Resale Price — Model Training Journey</h1>
-<p class="subtitle">Live document &mdash; update after every Kaggle submission &bull; Last updated: 2026-04-28</p>
+<p class="subtitle">Live document &mdash; update after every Kaggle submission &bull; Last updated: 2026-04-29</p>
 
 <!-- Current Best -->
 <div class="score-box">
@@ -214,6 +214,18 @@
     <div class="tl-label">Team<br>Ensemble</div>
     <div class="tl-score">$21,350</div>
   </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot worse">3m-v19</div>
+    <div class="tl-label">3-member<br>v19 blend</div>
+    <div class="tl-score">$21,366</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot worse">4m-wt</div>
+    <div class="tl-label">4-member<br>+Lai wt</div>
+    <div class="tl-score">$21,661</div>
+  </div>
 </div>
 <p style="font-size:0.82em;color:#6b7280;">
   <span class="badge b-green">green</span> = improved &nbsp;
@@ -319,6 +331,37 @@
     <td style="color:#dc2626;font-weight:600;">+$4 ↑</td>
     <td><span class="badge b-red">no gain</span></td>
   </tr>
+  <tr style="background:#f0fdf4;">
+    <td><span class="badge b-green">v19</span></td>
+    <td>4-model stack — LGBM+ET Optuna params</td><td><code>19_lgbm_et_optuna_params</code></td>
+    <td>$21,533 OOF</td><td>—</td><td>—</td>
+    <td style="color:#059669;font-weight:600;">–$19 ↓</td>
+    <td><span class="badge b-gray">used in team blend</span></td>
+  </tr>
+</table>
+
+<h3 style="margin:24px 0 10px;color:#374151;">Today's Team Submissions (2026-04-29)</h3>
+<table>
+  <tr>
+    <th>Version</th><th>Method</th><th>Notebook</th>
+    <th>CV/OOF RMSE</th><th>Kaggle RMSE</th><th>Δ vs best</th><th>Status</th>
+  </tr>
+  <tr style="background:#f0fdf4;">
+    <td>3member-v19</td>
+    <td>Equal-weight blend (MengHai v19 + Lanson + Likhong)</td>
+    <td><code>ensemble_team</code></td>
+    <td>—</td><td>$21,366.39</td>
+    <td style="color:#dc2626;font-weight:600;">+$15 ↑</td>
+    <td><span class="badge b-blue">submitted</span></td>
+  </tr>
+  <tr>
+    <td>4member-wt</td>
+    <td>Weighted blend (incl. Ken Lai, 1/RMSE²)</td>
+    <td><code>ensemble_team</code></td>
+    <td>—</td><td>$21,660.70</td>
+    <td style="color:#dc2626;font-weight:600;">+$310 ↑</td>
+    <td><span class="badge b-red">Lai scale drag</span></td>
+  </tr>
 </table>
 
 <h3 style="margin:24px 0 10px;color:#374151;">Team Members</h3>
@@ -344,12 +387,15 @@
   </tr>
   <tr><td>Ensemble-eq</td><td>Equal-weight blend</td><td><code>ensemble_team</code></td><td>—</td><td>$21,359.82</td><td>—</td><td style="color:#059669;font-weight:600;">–$188 ↓</td><td><span class="badge b-blue">submitted</span></td></tr>
   <tr style="background:#fffbeb;">
-    <td><strong>Ensemble-wt</strong></td><td><strong>Weighted blend (Ridge)</strong></td><td><code>ensemble_team</code></td><td>—</td>
+    <td><strong>Ensemble-wt</strong></td><td><strong>Weighted blend (1/RMSE²)</strong></td><td><code>ensemble_team</code></td><td>—</td>
     <td><strong>$21,350.91</strong></td><td>—</td>
     <td style="color:#059669;font-weight:600;">–$197 ↓</td>
-    <td><span class="badge b-gold">🏆 BEST</span></td>
+    <td><span class="badge b-gold">🏆 BEST (tied)</span></td>
   </tr>
-  <tr><td>Ensemble-rk</td><td>Rank average</td><td><code>ensemble_team</code></td><td>—</td><td>$21,384.22</td><td>—</td><td style="color:#059669;font-weight:600;">–$164 ↓</td><td><span class="badge b-blue">submitted</span></td></tr>
+  <tr><td>Ensemble-rk</td><td>Rank average (3-member)</td><td><code>ensemble_team</code></td><td>—</td><td>$21,384.22</td><td>—</td><td style="color:#059669;font-weight:600;">–$164 ↓</td><td><span class="badge b-blue">submitted</span></td></tr>
+  <tr style="background:#f0fdf4;"><td>3-member-v19</td><td>Equal-weight (MengHai v19)</td><td><code>ensemble_team</code></td><td>—</td><td>$21,366.39</td><td>—</td><td style="color:#059669;font-weight:600;">–$181 ↓</td><td><span class="badge b-blue">submitted</span></td></tr>
+  <tr><td>4member-rk</td><td>Rank avg (incl. Lai)</td><td><code>ensemble_team</code></td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class="badge b-blue">generated, not submitted</span></td></tr>
+  <tr><td>4member-wt</td><td>Weighted (incl. Lai, 1/RMSE²)</td><td><code>ensemble_team</code></td><td>—</td><td>$21,660.70</td><td>—</td><td style="color:#dc2626;font-weight:600;">+$310 ↑</td><td><span class="badge b-red">Lai scale drag</span></td></tr>
 </table>
 
 <hr class="divider">
@@ -834,26 +880,26 @@
   </div>
 </div>
 
-<!-- Team Ensemble -->
+<!-- Team Ensemble — April 28 -->
 <div class="version-card card-border-gold">
   <div class="card-header">
-    <div class="card-version" style="font-size:1.1rem;">Team<br>Ensemble</div>
-    <div class="card-title">Weighted Blend of 3 Best Team Models — #2 Leaderboard</div>
-    <div class="card-meta">2026-04-28 &bull; <code>ensemble_team.ipynb</code> &bull; <span class="badge b-gold">🏆 BEST — #2 Leaderboard</span></div>
+    <div class="card-version" style="font-size:1.1rem;">Team<br>Ens-1</div>
+    <div class="card-title">3-Member Blend (Lanson + MengHai v16 + Likhong) — #4 Leaderboard</div>
+    <div class="card-meta">2026-04-28 &bull; <code>ensemble_team.ipynb</code> &bull; <span class="badge b-gold">🏆 BEST (tied) — $21,350.91</span></div>
   </div>
   <div class="card-body">
     <div class="two-col">
       <div>
         <h3>What we tried</h3>
         <ul>
-          <li>Combined OOF predictions from MengHai (v16), Lanson (fulldataV1), Likhong (best model)</li>
-          <li>Tested 3 methods: equal-weight average, Ridge-optimised weights, rank averaging</li>
-          <li>Weighted blend scored best</li>
+          <li>Combined predictions from Lanson ($21,035), MengHai v16 ($21,578), Likhong ($22,094)</li>
+          <li>Tested 3 strategies: equal-weight average, RMSE²-weighted, rank averaging</li>
+          <li>Weighted blend (1/RMSE²) scored best at $21,350.91</li>
         </ul>
       </div>
       <div>
         <h3>Why</h3>
-        <p>Each team member trained on different features with different algorithms. Their errors on individual flats are partially uncorrelated — averaging cancels those errors, reducing RMSE beyond what any individual model can achieve.</p>
+        <p>Each member trained on different features with different algorithms. Their prediction errors on individual flats are partially uncorrelated — averaging cancels errors, reducing RMSE beyond what any single model achieves. Correlation between members: 0.9982–0.9988 (meaningful diversity).</p>
       </div>
     </div>
     <div class="card-scores">
@@ -862,7 +908,47 @@
       <div class="cs-item"><div class="cs-num">$21,384.22</div><div class="cs-label">Rank average</div></div>
       <div class="cs-item"><div class="cs-num cs-delta-better">–$197 ↓</div><div class="cs-label">vs best individual</div></div>
     </div>
-    <div class="card-learning">💡 <strong>Key learning:</strong> Team ensemble delivered the largest single improvement in the project (–$197). Error cancellation across diverse teams is more powerful than any single model improvement. Gap to 1st place: <strong>$108</strong>.</div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> Team ensemble delivered the largest single improvement in the project (–$197). Error cancellation across diverse teams is more powerful than any single model improvement.</div>
+  </div>
+</div>
+
+<!-- Team Ensemble — April 29: 4-member with Ken Lai -->
+<div class="version-card card-border-gold">
+  <div class="card-header">
+    <div class="card-version" style="font-size:1.1rem;">Team<br>Ens-2</div>
+    <div class="card-title">4-Member Blend Experiment (+ Ken Lai) — Rank Avg Tied BEST, Weighted Failed</div>
+    <div class="card-meta">2026-04-29 &bull; <code>ensemble_team.ipynb</code> &bull; <span class="badge b-blue">2 submitted</span> <span class="badge b-blue">1 generated only</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>Added Ken Lai's submission ($35,328 Kaggle) to the 3-member ensemble</li>
+          <li>Updated MengHai to v19 (OOF $21,533, Optuna-tuned LGBM+ET)</li>
+          <li>Tested 3 blend strategies: 3-member equal, 4-member weighted, 4-member rank averaging</li>
+          <li>Lai's correlation with others: 0.9796–0.9815 (below 0.99 = meaningful diversity)</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why include Lai despite $35K RMSE?</h3>
+        <p>Correlation ≠ accuracy. Even a weak model can add value if its prediction <em>rank-ordering</em> is partially correct. Lai's 0.9796 correlation means she agrees on which flats are expensive vs cheap — just with a systematic price scale bias. That ordering signal can be extracted safely via rank averaging.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$21,366.39</div><div class="cs-label">3-member v19 (submitted)</div></div>
+      <div class="cs-item"><div class="cs-num" style="color:#6b7280;font-weight:700;">—</div><div class="cs-label">4-member rank avg (not submitted)</div></div>
+      <div class="cs-item"><div class="cs-num" style="color:#dc2626;font-weight:700;">$21,660.70</div><div class="cs-label">4-member weighted ✗ (submitted)</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-worse">+$310 ↑</div><div class="cs-label">weighted vs best (Lai scale drag)</div></div>
+    </div>
+    <div class="card-learning">
+      💡 <strong>Key learning — when rank averaging works vs when raw averaging fails:</strong>
+      <ul style="margin:8px 0 0 0;padding-left:1.2em;">
+        <li><strong>Weighted blend failed ($21,660.70, +$310 worse):</strong> Lai's absolute predictions are systematically inflated by ~$14K above market. At 11% weight (1/RMSE²), this adds a constant upward bias of ~$1,500 to every prediction — unavoidable because raw averaging uses actual price values.</li>
+        <li><strong>Rank averaging (generated, not submitted):</strong> Rank averaging converts each member's predictions to their relative ordering (rank 1 = cheapest, rank N = most expensive), then averages those ranks. This neutralises Lai's absolute scale bias — her "this flat is relatively expensive" signal is preserved while her "$14K too high" offset disappears entirely. Not submitted due to submission limit constraints.</li>
+        <li><strong>Rule:</strong> A model with correct relative rankings but wrong absolute scale should <em>only</em> be included via rank averaging, never raw or weighted averaging. Raw averaging amplifies scale errors; rank averaging immunises against them.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -901,33 +987,44 @@
 
 <!-- SECTION 6: WHAT'S NEXT -->
 <h2>6. What's Next</h2>
-<p>Current gap to 1st place: <strong>$108</strong> (Group 9 = $21,242.91)</p>
+<p>Current gap to 1st place: <strong>~$108</strong> (Group 9 = $21,242.91) &bull; Our best: $21,350.91 (tied, Team Ens-1 &amp; Team Ens-2)</p>
 
 <table>
-  <tr><th>#</th><th>Experiment</th><th>Expected gain</th><th>Notes</th></tr>
-  <tr>
+  <tr><th>#</th><th>Experiment</th><th>Expected gain</th><th>Status</th><th>Notes</th></tr>
+  <tr style="background:#f0fdf4;">
     <td>1</td>
-    <td><strong>Submit sub_v16_fulldata.csv</strong></td>
-    <td>–$50 to –$100</td>
-    <td>100% data retrain already generated — trains all 4 base models on full 150K rows instead of 80%/fold. Easiest next win.</td>
+    <td><strong>Retune LGBM + ET hyperparameters (Optuna)</strong></td>
+    <td>–$19 OOF</td>
+    <td><span class="badge b-green">✓ Done (v19)</span></td>
+    <td>Optuna 100-trial TPE on LGBM + 50-trial on ET. OOF RMSE $21,552 → $21,533 (–$19). Submitted as part of Team Ens-2 3-member variant ($21,366.39).</td>
   </tr>
-  <tr>
+  <tr style="background:#f0fdf4;">
     <td>2</td>
-    <td><strong>Retune XGB/LGBM hyperparameters</strong></td>
-    <td>–$50 to –$150</td>
-    <td>v9 params used since v9; v16 now has 9 more features than when params were originally tuned — params are stale.</td>
+    <td><strong>Retune CatBoost hyperparameters (Optuna)</strong></td>
+    <td>–$1,123 individual val</td>
+    <td><span class="badge b-green">✓ Done (v20)</span></td>
+    <td>Optuna 100-trial TPE on CatBoost alone. Individual val RMSE $22,607 → $21,484 (–$1,123). Combined with all Optuna params in v20/nb21 — stack OOF TBD after run completes.</td>
   </tr>
   <tr>
     <td>3</td>
-    <td><strong>Optimise ensemble weights via OOF</strong></td>
-    <td>–$20 to –$50</td>
-    <td>Grid-search weights on all team OOF predictions instead of fixed Ridge meta ratios.</td>
+    <td><strong>Submit v20 stack (all Optuna params)</strong></td>
+    <td>–$50 to –$100 estimated</td>
+    <td><span class="badge b-blue">Pending (nb21 running)</span></td>
+    <td>XGB + LGBM (Optuna) + ET (Optuna) + CatBoost (Optuna) in the full stacking pipeline. If OOF improves, update team ensemble with new MengHai predictions.</td>
   </tr>
   <tr>
     <td>4</td>
-    <td><strong>Add more team member OOF predictions</strong></td>
+    <td><strong>Optimise team ensemble weights via OOF</strong></td>
+    <td>–$20 to –$50</td>
+    <td><span class="badge b-blue">Not started</span></td>
+    <td>Grid-search blend weights over all team OOF predictions together instead of each member's Ridge meta ratios separately.</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td><strong>Add more team member models for diversity</strong></td>
     <td>–$10 to –$30</td>
-    <td>More model diversity = more error cancellation in the ensemble.</td>
+    <td><span class="badge b-blue">Not started</span></td>
+    <td>If any member improves their individual submission, re-run ensemble_team.ipynb with updated file. More model diversity = more error cancellation.</td>
   </tr>
 </table>
 

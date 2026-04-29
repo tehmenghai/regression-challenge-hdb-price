@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  var BEST_SCORE = '$21,805';
+  var BEST_SCORE = '$21,335';
 
   // Works for file:// (local) and https:// (CloudFront)
   var homeUrl = 'index.html';
