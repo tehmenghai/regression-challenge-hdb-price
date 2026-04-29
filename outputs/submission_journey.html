@@ -98,29 +98,29 @@
 <body>
 
 <h1>HDB Resale Price — Model Training Journey</h1>
-<p class="subtitle">Live document &mdash; update after every Kaggle submission &bull; Last updated: 2026-04-23</p>
+<p class="subtitle">Live document &mdash; update after every Kaggle submission &bull; Last updated: 2026-04-28</p>
 
 <!-- Current Best -->
 <div class="score-box">
   <div class="score-item">
-    <div class="score-num">$21,804.67</div>
-    <div class="score-label">Best Kaggle Public RMSE (v8)</div>
-    <div class="score-delta">🏆 current best</div>
+    <div class="score-num">$21,350.91</div>
+    <div class="score-label">Best Kaggle Public RMSE</div>
+    <div class="score-delta">🏆 Team Ensemble Weighted — #2 Leaderboard</div>
   </div>
   <div class="score-item">
-    <div class="score-num">$338</div>
-    <div class="score-label">Gap to 1st place ($21,466)</div>
-    <div class="score-delta">1st = Team with lowest RMSE</div>
+    <div class="score-num">$108</div>
+    <div class="score-label">Gap to 1st place ($21,242.91)</div>
+    <div class="score-delta">1st = Group 9</div>
   </div>
   <div class="score-item">
-    <div class="score-num">–$4,138</div>
+    <div class="score-num">–$4,592</div>
     <div class="score-label">Total improvement from v1</div>
-    <div class="score-delta">–16.0% from $25,943</div>
+    <div class="score-delta">–17.7% from $25,943</div>
   </div>
   <div class="score-item">
-    <div class="score-num">8</div>
+    <div class="score-num">19</div>
     <div class="score-label">Submissions made</div>
-    <div class="score-delta">v1 through v8</div>
+    <div class="score-delta">v1 through ensemble</div>
   </div>
 </div>
 
@@ -131,7 +131,7 @@
     <li>Timeline</li>
     <li>Quick Reference Table</li>
     <li>CV vs Kaggle Gap Trend</li>
-    <li>Version Detail Cards (v1–v8)</li>
+    <li>Version Detail Cards (v1–v17 + Team Ensemble)</li>
     <li>Cumulative Feature Engineering</li>
     <li>What's Next</li>
   </ol>
@@ -186,9 +186,33 @@
   </div>
   <div class="tl-line"></div>
   <div class="tl-node">
-    <div class="tl-dot best">v8</div>
+    <div class="tl-dot better">v8</div>
     <div class="tl-label">Stack<br>3-model</div>
     <div class="tl-score">$21,805</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot better">v9</div>
+    <div class="tl-label">+OOF<br>encodings</div>
+    <div class="tl-score">$21,755</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot worse">v10–13</div>
+    <div class="tl-label">HPO/<br>expts</div>
+    <div class="tl-score">$21,783</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot better">v16</div>
+    <div class="tl-label">+CatBoost<br>4th base</div>
+    <div class="tl-score">OOF<br>$21,552</div>
+  </div>
+  <div class="tl-line"></div>
+  <div class="tl-node">
+    <div class="tl-dot best">Ens</div>
+    <div class="tl-label">Team<br>Ensemble</div>
+    <div class="tl-score">$21,350</div>
   </div>
 </div>
 <p style="font-size:0.82em;color:#6b7280;">
@@ -249,13 +273,81 @@
     <td>$21,841</td><td>$21,906</td><td>$65</td><td style="color:#059669;font-weight:600;">–$218 ↓</td>
     <td><span class="badge b-blue">submitted</span></td>
   </tr>
-  <tr style="background:#fffbeb;">
-    <td><span class="badge b-gold">v8</span></td>
-    <td><strong>Stack XGB+LGBM+ET (Ridge)</strong></td><td><code>07_et_stack</code></td>
-    <td><strong>$21,708</strong></td><td><strong>$21,805</strong></td><td>$97</td>
+  <tr>
+    <td><span class="badge b-green">v8</span></td>
+    <td>Stack XGB+LGBM+ET (Ridge)</td><td><code>07_et_stack</code></td>
+    <td>$21,708</td><td>$21,805</td><td>$97</td>
     <td style="color:#059669;font-weight:600;">–$101 ↓</td>
-    <td><span class="badge b-gold">🏆 best</span></td>
+    <td><span class="badge b-blue">submitted</span></td>
   </tr>
+  <tr>
+    <td><span class="badge b-green">v9</span></td>
+    <td>Stack XGB+LGBM+ET (Expanded OOF)</td><td><code>08_v9_stack</code></td>
+    <td>~$21,708</td><td>$21,755.56</td><td>~$47</td>
+    <td style="color:#059669;font-weight:600;">–$49 ↓</td>
+    <td><span class="badge b-blue">submitted</span></td>
+  </tr>
+  <tr>
+    <td><span class="badge b-red">v10–v13</span></td>
+    <td>HPO + H3/block/CatBoost experiments</td><td><code>09–13_*.ipynb</code></td>
+    <td>$21,578 OOF</td><td>$21,783.02</td><td>$205</td>
+    <td style="color:#dc2626;font-weight:600;">+$27 ↑</td>
+    <td><span class="badge b-red">worse on Kaggle</span></td>
+  </tr>
+  <tr style="background:#f8fafc;">
+    <td><span class="badge b-gray">v14b</span></td>
+    <td>Lease + Interaction Features</td><td><code>14b_clean_features</code></td>
+    <td>~$21,593 OOF</td><td>—</td><td>—</td><td>—</td>
+    <td><span class="badge b-gray">team sub only</span></td>
+  </tr>
+  <tr style="background:#f8fafc;">
+    <td><span class="badge b-gray">v15</span></td>
+    <td>town×flat_type + Year OOF</td><td><code>15_interaction_oofs</code></td>
+    <td>$21,593 OOF</td><td>—</td><td>—</td><td>—</td>
+    <td><span class="badge b-gray">team sub only</span></td>
+  </tr>
+  <tr style="background:#fffbeb;">
+    <td><span class="badge b-gold">v16</span></td>
+    <td><strong>CatBoost 4th Base + Full Retrain</strong></td><td><code>16_catboost_stack</code></td>
+    <td><strong>$21,552 OOF</strong></td><td>—</td><td>—</td><td>—</td>
+    <td><span class="badge b-gold">🏆 best solo OOF</span></td>
+  </tr>
+  <tr>
+    <td><span class="badge b-red">v17</span></td>
+    <td>School Name OOF (rejected)</td><td><code>17_school_oof</code></td>
+    <td>$21,556 OOF</td><td>—</td><td>—</td>
+    <td style="color:#dc2626;font-weight:600;">+$4 ↑</td>
+    <td><span class="badge b-red">no gain</span></td>
+  </tr>
+</table>
+
+<h3 style="margin:24px 0 10px;color:#374151;">Team Members</h3>
+<table>
+  <tr>
+    <th>Member</th><th>Model</th><th>Notebook</th>
+    <th>CV/OOF RMSE</th><th>Kaggle RMSE</th><th>Gap</th><th>Δ vs prev</th><th>Status</th>
+  </tr>
+  <tr style="background:#f8fafc;"><td>Likhong-v1</td><td>Unknown</td><td>—</td><td>—</td><td>$22,187.95</td><td>—</td><td>—</td><td><span class="badge b-blue">team</span></td></tr>
+  <tr><td>Lanson-v1</td><td>Unknown</td><td>—</td><td>—</td><td>$21,932.24</td><td>—</td><td>—</td><td><span class="badge b-blue">team</span></td></tr>
+  <tr style="background:#f8fafc;"><td>Lanson-v2</td><td>Unknown</td><td>—</td><td>—</td><td>$21,705.81</td><td>—</td><td>—</td><td><span class="badge b-blue">team</span></td></tr>
+  <tr><td>Lai-v1</td><td>Unknown</td><td>—</td><td>—</td><td>$35,111.47</td><td>—</td><td>—</td><td><span class="badge b-red">malformed</span></td></tr>
+  <tr style="background:#f8fafc;"><td>Lanson-full</td><td>Unknown (100% retrain?)</td><td>—</td><td>—</td><td>$21,548.25</td><td>—</td><td>—</td><td><span class="badge b-blue">team</span></td></tr>
+</table>
+
+<h3 style="margin:24px 0 10px;color:#374151;">Team Ensemble</h3>
+<table>
+  <tr>
+    <th>Version</th><th>Method</th><th>Notebook</th>
+    <th>CV/OOF RMSE</th><th>Kaggle RMSE</th><th>Gap</th><th>Δ vs best indiv.</th><th>Status</th>
+  </tr>
+  <tr><td>Ensemble-eq</td><td>Equal-weight blend</td><td><code>ensemble_team</code></td><td>—</td><td>$21,359.82</td><td>—</td><td style="color:#059669;font-weight:600;">–$188 ↓</td><td><span class="badge b-blue">submitted</span></td></tr>
+  <tr style="background:#fffbeb;">
+    <td><strong>Ensemble-wt</strong></td><td><strong>Weighted blend (Ridge)</strong></td><td><code>ensemble_team</code></td><td>—</td>
+    <td><strong>$21,350.91</strong></td><td>—</td>
+    <td style="color:#059669;font-weight:600;">–$197 ↓</td>
+    <td><span class="badge b-gold">🏆 BEST</span></td>
+  </tr>
+  <tr><td>Ensemble-rk</td><td>Rank average</td><td><code>ensemble_team</code></td><td>—</td><td>$21,384.22</td><td>—</td><td style="color:#059669;font-weight:600;">–$164 ↓</td><td><span class="badge b-blue">submitted</span></td></tr>
 </table>
 
 <hr class="divider">
@@ -270,6 +362,10 @@
   <tr><td>v6</td><td>$21,818</td><td>$22,124</td><td style="color:#d97706;font-weight:700;">$306</td><td>OOF encoding for <code>town_median_price</code> eliminated leakage</td></tr>
   <tr><td>v7</td><td>$21,841</td><td>$21,906</td><td style="color:#059669;font-weight:700;">$65</td><td>OOF stacking + fold-averaged test predictions</td></tr>
   <tr><td>v8</td><td>$21,708</td><td>$21,805</td><td style="color:#059669;font-weight:700;">$97</td><td>3-model stack; slight gap increase (expected with added model)</td></tr>
+  <tr><td>v9</td><td>~$21,708</td><td>$21,755.56</td><td style="color:#059669;font-weight:700;">~$47</td><td>Expanded OOF encodings (postal_sector, flat_model); gap stays excellent</td></tr>
+  <tr><td>v10–v13</td><td>$21,578</td><td>$21,783.02</td><td style="color:#dc2626;font-weight:700;">$205</td><td>Gap widened — test distribution shift or subtle leakage in HPO experiments</td></tr>
+  <tr><td>v16</td><td>$21,552 OOF</td><td>—</td><td>—</td><td>Not individually submitted; 4-model stack used as team input</td></tr>
+  <tr style="background:#fffbeb;"><td><strong>Ensemble-wt</strong></td><td>—</td><td><strong>$21,350.91</strong></td><td>—</td><td>Team blend; gap not applicable — predictions combined across members</td></tr>
 </table>
 
 <div class="highlight">
@@ -507,11 +603,11 @@
 </div>
 
 <!-- v8 -->
-<div class="version-card card-border-gold">
+<div class="version-card card-border-green">
   <div class="card-header">
     <div class="card-version">v8</div>
     <div class="card-title">3-Model Stack — Ridge Meta on XGB+LGBM+ET OOF</div>
-    <div class="card-meta">2026-04-23 &bull; <code>07_extra_trees_stack.ipynb</code> &bull; <span class="badge b-gold">🏆 current best</span></div>
+    <div class="card-meta">2026-04-23 &bull; <code>07_extra_trees_stack.ipynb</code> &bull; <span class="badge b-blue">submitted</span></div>
   </div>
   <div class="card-body">
     <div class="two-col">
@@ -539,6 +635,235 @@
   </div>
 </div>
 
+<!-- v9 -->
+<div class="version-card card-border-green">
+  <div class="card-header">
+    <div class="card-version">v9</div>
+    <div class="card-title">Stack XGB+LGBM+ET — Expanded OOF Encodings</div>
+    <div class="card-meta">2026-04-23 &bull; <code>08_v9_stack.ipynb</code> &bull; <span class="badge b-blue">submitted</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>Added <code>postal_sector_median_price</code> OOF encoding (~500 postal sectors)</li>
+          <li>Added <code>flat_model_median_price</code> OOF encoding (Model A, Improved, Premium, etc.)</li>
+          <li>Re-tuned base models on expanded feature set</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>Postal sector is finer-grained than town (~26 groups → ~500 groups) and captures block-level price variation. Flat model carries independent price signal not captured by flat_type alone.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">~$21,708</div><div class="cs-label">OOF RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$21,755.56</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num" style="color:#059669;">~$47</div><div class="cs-label">Gap (excellent)</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-better">–$49 ↓</div><div class="cs-label">Δ vs v8</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> Postal sector + flat model OOF encodings gave another –$49 Kaggle gain. Gap stayed excellent at ~$47, confirming OOF encoding fully prevents leakage.</div>
+  </div>
+</div>
+
+<!-- v10-v13 -->
+<div class="version-card card-border-red">
+  <div class="card-header">
+    <div class="card-version">v10–v13</div>
+    <div class="card-title">HPO + H3 Geohash / block_num / CatBoost Experiments</div>
+    <div class="card-meta">2026-04-23–27 &bull; <code>09–13_*.ipynb</code> &bull; <span class="badge b-red">worse on Kaggle</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>H3 geohash spatial encoding (hex-bin clustering)</li>
+          <li><code>block_num</code> numeric extraction from block field</li>
+          <li>Standalone CatBoost model experiment</li>
+          <li>Optuna HPO: Bayesian search, 100 trials each for XGB/LGBM</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>H3 geohash captures sub-postal-sector spatial signal. Optuna Bayesian search is smarter than RandomizedSearchCV. Block number was expected to carry corner/heritage premiums.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$21,578</div><div class="cs-label">Best OOF RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">$21,783.02</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num" style="color:#dc2626;">$205</div><div class="cs-label">Gap (widened!)</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-worse">+$27 ↑</div><div class="cs-label">Δ vs v9</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> Despite better OOF ($21,578 vs v9), Kaggle was $27 worse and the gap widened to $205. Signals test distribution drift or subtle leakage. These experiments refined the feature/encoding approach used in v14b+.</div>
+  </div>
+</div>
+
+<!-- v14b -->
+<div class="version-card card-border-green">
+  <div class="card-header">
+    <div class="card-version">v14b</div>
+    <div class="card-title">Lease Depreciation + Storey Interaction Features</div>
+    <div class="card-meta">2026-04-28 &bull; <code>14b_clean_features.ipynb</code> &bull; <span class="badge b-gray">team sub only</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li><code>log_remaining_lease</code>: log1p transform — linearises depreciation curve</li>
+          <li><code>lease_below_60</code>: binary flag for <60yr remaining (financing cliff)</li>
+          <li><code>lease_x_below60</code>: remaining_lease × lease_below_60 interaction</li>
+          <li><code>flat_type_rank</code>: ordinal size rank (studio → EA)</li>
+          <li><code>storey_x_flattype</code>: mid_storey × flat_type_rank interaction</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>HDB prices don't depreciate linearly with lease. The &lt;60-year threshold is a market discontinuity — bank financing restrictions kick in. Storey premium differs by flat type: high floors matter more for large flats.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">~$21,593</div><div class="cs-label">OOF RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">—</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">—</div><div class="cs-label">Gap</div></div>
+      <div class="cs-item"><div class="cs-num">—</div><div class="cs-label">Δ vs prev</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> 5 new interaction features proved useful — became the base for v15 and v16. Not submitted individually; folded into v15 for team submission.</div>
+  </div>
+</div>
+
+<!-- v15 -->
+<div class="version-card card-border-green">
+  <div class="card-header">
+    <div class="card-version">v15</div>
+    <div class="card-title">town×flat_type + Transaction Year OOF Encodings</div>
+    <div class="card-meta">2026-04-28 &bull; <code>15_interaction_oofs.ipynb</code> &bull; <span class="badge b-gray">team sub only</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li><code>town_flat_type_median_price</code>: OOF encoding for town×flat_type combo (e.g. "Tampines 4-room")</li>
+          <li><code>year_median_price</code>: OOF encoding for transaction year (Tranc_Year)</li>
+          <li>Built on all v14b features (5 ENCODE_PAIRS total)</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>A 4-room flat in Bishan vs Jurong West has very different prices — that gap isn't fully captured by town or flat_type alone. Year encoding captures macro market cycles (2021 vs 2023 price peaks).</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$21,593</div><div class="cs-label">OOF RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">—</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">—</div><div class="cs-label">Gap</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-better">–$115 OOF ↓</div><div class="cs-label">vs v9</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> town×flat_type interaction OOF gave –$115 OOF improvement vs v9. Joint encoding captures signal that neither town nor flat_type alone can. Filed as team submission only.</div>
+  </div>
+</div>
+
+<!-- v16 -->
+<div class="version-card card-border-gold">
+  <div class="card-header">
+    <div class="card-version">v16</div>
+    <div class="card-title">4-Model Stack — CatBoost as 4th Base + 100% Data Retrain</div>
+    <div class="card-meta">2026-04-28 &bull; <code>16_catboost_stack.ipynb</code> &bull; <span class="badge b-gold">🏆 best solo OOF</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>Added <code>CatBoostRegressor</code> as 4th base (symmetric/oblivious trees)</li>
+          <li>CAT params: <code>iterations=1000, depth=7, lr=0.08, l2=1, col=0.7</code></li>
+          <li>Ridge meta on 4 OOF predictions; alpha=0.001</li>
+          <li>Also generated 100% data retrain (<code>sub_v16_fulldata.csv</code>)</li>
+        </ul>
+        <p>Ridge weights: <code>XGB 0.343 + LGBM 0.367 + ET 0.120 + CAT 0.173</code></p>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>CatBoost uses symmetric (oblivious) trees — it splits the same feature at every level, making structurally different errors than XGB/LGBM gradient boosting. Ridge exploits this diversity. 100% retrain uses all 150K rows (vs 80%/fold) for test predictions.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$21,552</div><div class="cs-label">OOF RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">—</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">—</div><div class="cs-label">Gap</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-better">–$41 OOF ↓</div><div class="cs-label">vs v15</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> CatBoost is individually weaker ($22,607 solo) but contributed 17% Ridge weight and cut OOF by $41. Confirms: stack diversity > individual strength. Used as MengHai's contribution to the winning team ensemble.</div>
+  </div>
+</div>
+
+<!-- v17 -->
+<div class="version-card card-border-red">
+  <div class="card-header">
+    <div class="card-version">v17</div>
+    <div class="card-title">Primary School Name OOF Encoding (Rejected)</div>
+    <div class="card-meta">2026-04-28 &bull; <code>17_school_oof.ipynb</code> &bull; <span class="badge b-red">❌ no gain</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li><code>pri_sch_median_price</code>: OOF encoding for <code>pri_sch_name</code> (177 schools)</li>
+          <li><code>log_pri_sch_dist</code>, <code>log_sec_sch_dist</code>: log-distance features</li>
+          <li>6 ENCODE_PAIRS total (vs 5 in v16)</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>Top primary schools (Raffles, Nan Hua) are known to drive HDB premiums in their 1km registration zone. School OOF was expected to capture this hyper-local signal.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$21,556</div><div class="cs-label">OOF RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">—</div><div class="cs-label">Kaggle RMSE</div></div>
+      <div class="cs-item"><div class="cs-num">—</div><div class="cs-label">Gap</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-worse">+$4 ↑</div><div class="cs-label">Δ vs v16</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> School signal is already captured by <code>postal_sector_median_price</code> (598 postal sectors ≈ 200m grid). Adding school OOF was redundant — the fine-grained postal sector encoding made school OOF noise, not signal. Rejected.</div>
+  </div>
+</div>
+
+<!-- Team Ensemble -->
+<div class="version-card card-border-gold">
+  <div class="card-header">
+    <div class="card-version" style="font-size:1.1rem;">Team<br>Ensemble</div>
+    <div class="card-title">Weighted Blend of 3 Best Team Models — #2 Leaderboard</div>
+    <div class="card-meta">2026-04-28 &bull; <code>ensemble_team.ipynb</code> &bull; <span class="badge b-gold">🏆 BEST — #2 Leaderboard</span></div>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <h3>What we tried</h3>
+        <ul>
+          <li>Combined OOF predictions from MengHai (v16), Lanson (fulldataV1), Likhong (best model)</li>
+          <li>Tested 3 methods: equal-weight average, Ridge-optimised weights, rank averaging</li>
+          <li>Weighted blend scored best</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Why</h3>
+        <p>Each team member trained on different features with different algorithms. Their errors on individual flats are partially uncorrelated — averaging cancels those errors, reducing RMSE beyond what any individual model can achieve.</p>
+      </div>
+    </div>
+    <div class="card-scores">
+      <div class="cs-item"><div class="cs-num">$21,359.82</div><div class="cs-label">Equal weight</div></div>
+      <div class="cs-item"><div class="cs-num" style="color:#d97706;font-weight:700;">$21,350.91</div><div class="cs-label">Weighted (BEST)</div></div>
+      <div class="cs-item"><div class="cs-num">$21,384.22</div><div class="cs-label">Rank average</div></div>
+      <div class="cs-item"><div class="cs-num cs-delta-better">–$197 ↓</div><div class="cs-label">vs best individual</div></div>
+    </div>
+    <div class="card-learning">💡 <strong>Key learning:</strong> Team ensemble delivered the largest single improvement in the project (–$197). Error cancellation across diverse teams is more powerful than any single model improvement. Gap to 1st place: <strong>$108</strong>.</div>
+  </div>
+</div>
+
 <hr class="divider">
 
 <!-- SECTION 5: FEATURE ENGINEERING -->
@@ -559,39 +884,48 @@
   <tr><td><code>lease_x_area</code></td><td>v6</td><td>remaining_lease × floor_area_sqm — combined value signal.</td><td><span class="badge b-green">yes</span></td></tr>
   <tr><td><code>log_dist_to_cbd</code></td><td>v6</td><td>log1p(dist_to_cbd) — linearises the distance-price relationship.</td><td><span class="badge b-green">yes</span></td></tr>
   <tr><td><code>street_freq</code></td><td>v7</td><td>Count of transactions per street_name — premium street signal, no target leakage.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>postal_sector_median_price</code></td><td>v9</td><td>Median resale price per postal sector (OOF) — finer-grained location signal than town.</td><td><span class="badge b-green">yes (OOF)</span></td></tr>
+  <tr><td><code>flat_model_median_price</code></td><td>v9</td><td>Median resale price per flat model type (OOF) — Model A vs Improved vs Premium pricing.</td><td><span class="badge b-green">yes (OOF)</span></td></tr>
+  <tr><td><code>log_remaining_lease</code></td><td>v14b</td><td>log1p(remaining_lease) — linearises the non-linear HDB depreciation curve.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>lease_below_60</code></td><td>v14b</td><td>Binary flag: remaining_lease &lt; 60 years — captures financing cliff (bank restrictions).</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>lease_x_below60</code></td><td>v14b</td><td>remaining_lease × lease_below_60 — interaction captures accelerated depreciation zone.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>flat_type_rank</code></td><td>v14b</td><td>Ordinal size rank of flat type (studio=0 through EA=6) — enables numeric interactions.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>storey_x_flattype</code></td><td>v14b</td><td>mid_storey × flat_type_rank — storey premium varies by flat size.</td><td><span class="badge b-green">yes</span></td></tr>
+  <tr><td><code>town_flat_type_median_price</code></td><td>v15</td><td>Median price per town×flat_type combo (OOF) — captures joint location-size pricing.</td><td><span class="badge b-green">yes (OOF)</span></td></tr>
+  <tr><td><code>year_median_price</code></td><td>v15</td><td>Median price per transaction year (OOF) — captures macro market cycle per year.</td><td><span class="badge b-green">yes (OOF)</span></td></tr>
 </table>
 
 <hr class="divider">
 
 <!-- SECTION 6: WHAT'S NEXT -->
 <h2>6. What's Next</h2>
-<p>Current gap to 1st place: <strong>$338</strong> (1st = $21,466)</p>
+<p>Current gap to 1st place: <strong>$108</strong> (Group 9 = $21,242.91)</p>
 
 <table>
   <tr><th>#</th><th>Experiment</th><th>Expected gain</th><th>Notes</th></tr>
   <tr>
     <td>1</td>
-    <td><strong>Optuna hyperparameter tuning</strong></td>
-    <td>–$50 to –$150</td>
-    <td>Bayesian optimisation. 100 Optuna trials ≈ 300 random trials. Works for all 3 base models.</td>
+    <td><strong>Submit sub_v16_fulldata.csv</strong></td>
+    <td>–$50 to –$100</td>
+    <td>100% data retrain already generated — trains all 4 base models on full 150K rows instead of 80%/fold. Easiest next win.</td>
   </tr>
   <tr>
     <td>2</td>
-    <td><strong>block_num encoding</strong></td>
-    <td>–$30 to –$80</td>
-    <td>Extract numeric part of block number. Corner/heritage blocks may carry premiums.</td>
+    <td><strong>Retune XGB/LGBM hyperparameters</strong></td>
+    <td>–$50 to –$150</td>
+    <td>v9 params used since v9; v16 now has 9 more features than when params were originally tuned — params are stale.</td>
   </tr>
   <tr>
     <td>3</td>
-    <td><strong>More interaction features</strong></td>
-    <td>–$20 to –$60</td>
-    <td>e.g. <code>storey × mature_estate</code>, <code>floor_area × remaining_lease × town_median</code></td>
+    <td><strong>Optimise ensemble weights via OOF</strong></td>
+    <td>–$20 to –$50</td>
+    <td>Grid-search weights on all team OOF predictions instead of fixed Ridge meta ratios.</td>
   </tr>
   <tr>
     <td>4</td>
-    <td><strong>Lower learning rate + more trees</strong></td>
-    <td>–$20 to –$50</td>
-    <td>Current LR=0.05 with 1500 trees. Try LR=0.02 with 3000+ trees for more stable convergence.</td>
+    <td><strong>Add more team member OOF predictions</strong></td>
+    <td>–$10 to –$30</td>
+    <td>More model diversity = more error cancellation in the ensemble.</td>
   </tr>
 </table>
 
