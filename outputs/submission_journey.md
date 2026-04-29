@@ -12,7 +12,7 @@
 | **Best Kaggle Public RMSE** | **$21,350.91 (Team Ensemble Weighted)** |
 | **Gap to 1st place** | $108 (1st = $21,242.91) |
 | **Total improvement from v1** | –$4,592 (–17.7%) |
-| **Submissions made** | 19 |
+| **Submissions made** | 21 |
 | **Last updated** | 2026-04-28 |
 
 ---
@@ -40,6 +40,8 @@
 
 | Version     | Model                   | Notebook | CV/OOF RMSE | Kaggle RMSE | Gap | Δ vs prev | Status |
 |---|---|---|---|---|---|---|---|
+| Likhong-v0a | Unknown model (1st attempt) | —     | —           | $23,299.17  | —   | —         | ✅ team |
+| Likhong-v0b | Unknown model (2nd attempt) | —     | —           | $23,299.17  | —   | —         | ✅ team |
 | Likhong-v1  | Unknown model           | —        | —           | $22,187.95  | —   | —         | ✅ team |
 | Lanson-v1   | Unknown model           | —        | —           | $21,932.24  | —   | —         | ✅ team |
 | Lanson-v2   | Unknown model           | —        | —           | $21,705.81  | —   | —         | ✅ team |
