@@ -43,7 +43,7 @@
 | Likhong-v1  | Unknown model           | —        | —           | $22,187.95  | —   | —         | ✅ team |
 | Lanson-v1   | Unknown model           | —        | —           | $21,932.24  | —   | —         | ✅ team |
 | Lanson-v2   | Unknown model           | —        | —           | $21,705.81  | —   | —         | ✅ team |
-| Lai-v1      | Unknown model           | —        | —           | $35,111.47  | —   | —         | ⚠️ malformed |
+| Lai-v1      | Unknown model           | —        | —           | $35,111.47  | —   | —         | ✅ team |
 | Lanson-full | Unknown (100% retrain?) | —        | —           | $21,548.25  | —   | —         | ✅ team |
 
 **Team Ensemble** (MengHai submitted on behalf of team)
