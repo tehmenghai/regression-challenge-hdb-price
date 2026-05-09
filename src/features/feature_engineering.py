@@ -100,6 +100,7 @@ def engineer_features(df, amenity_caps=None, street_freq_map=None):
     # Storey × flat_type interaction (v14b)
     df['flat_type_rank']    = df['flat_type'].str.upper().map(FLAT_TYPE_RANK).fillna(3)
     df['storey_x_flattype'] = df['mid_storey'] * df['flat_type_rank']
+    df['storey_pct']        = df['mid_storey'] / df['max_floor_lvl'].replace(0, np.nan).fillna(1)
 
     # Composite group key for (town, flat_type) OOF encoding — dropped from X before training
     df['town_flat_type'] = df['town'].astype(str) + '_' + df['flat_type'].astype(str)

@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HDB Resale Price Prediction — Team Presentation</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f1f5f9; color: #1a1a1a; min-height: 100vh;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    color: #fff; padding: 48px 32px 40px;
+  }
+  .hero-inner { max-width: 960px; margin: 0 auto; }
+  .hero-kicker { font-size: 0.78rem; letter-spacing: 0.15em; text-transform: uppercase; color: #38bdf8; margin-bottom: 10px; }
+  .hero h1 { font-size: 1.85rem; font-weight: 800; margin-bottom: 6px; }
+  .hero-sub { color: #94a3b8; font-size: 0.95rem; margin-bottom: 28px; }
+  .hero-scores { display: flex; flex-wrap: wrap; gap: 16px; }
+  .hs-item { background: rgba(255,255,255,0.08); border-radius: 10px; padding: 14px 20px; min-width: 140px; }
+  .hs-num   { font-size: 1.45rem; font-weight: 800; color: #38bdf8; }
+  .hs-label { font-size: 0.78rem; color: #94a3b8; margin-top: 2px; }
+  .hs-item.gold  .hs-num { color: #fbbf24; }
+  .hs-item.green .hs-num { color: #34d399; }
+  .hs-item.white .hs-num { color: #f8fafc; }
+
+  /* ── Main content ── */
+  .main { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #64748b;
+    margin: 44px 0 18px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::after { content:''; flex:1; height:1px; background:#e2e8f0; }
+
+  h2 { font-size: 1.35rem; color: #0369a1; border-left: 4px solid #0369a1; padding-left: 12px; margin: 36px 0 16px; }
+  h3 { font-size: 1rem; color: #1e40af; margin: 18px 0 8px; }
+  p  { margin-bottom: 10px; font-size: 0.94rem; color: #374151; }
+  ul, ol { margin: 8px 0 12px 22px; }
+  li { margin-bottom: 5px; font-size: 0.93rem; color: #374151; line-height: 1.6; }
+
+  /* ── Score box ── */
+  .score-box {
+    background: #fff; border: 2px solid #0369a1; border-radius: 10px;
+    padding: 20px 26px; margin: 20px 0;
+    display: flex; flex-wrap: wrap; gap: 28px; justify-content: space-around;
+  }
+  .score-item { text-align: center; }
+  .score-num   { font-size: 1.55rem; font-weight: 700; color: #0369a1; }
+  .score-label { font-size: 0.81em; color: #6b7280; }
+  .score-delta { font-size: 0.88rem; font-weight: 600; margin-top: 2px; }
+  .sd-green { color: #059669; }
+  .sd-gold  { color: #d97706; }
+
+  /* ── Cards ── */
+  .card {
+    background: #fff; border-radius: 10px; border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    padding: 22px 24px; margin-bottom: 16px;
+  }
+  .card-border-blue  { border-top: 4px solid #0369a1; }
+  .card-border-green { border-top: 4px solid #059669; }
+  .card-border-red   { border-top: 4px solid #dc2626; }
+  .card-border-gold  { border-top: 4px solid #d97706; }
+  .card-border-purple{ border-top: 4px solid #7c3aed; }
+
+  /* ── Two-col grid ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+  .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 12px 0; }
+
+  /* ── Callout boxes ── */
+  .highlight { background: #ecfdf5; border-left: 4px solid #059669; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; }
+  .warning   { background: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; }
+  .note      { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; }
+  blockquote { background: #eff6ff; border-left: 4px solid #0369a1; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; color: #1e40af; }
+
+  /* ── Badges ── */
+  .badge { display: inline-block; font-size: 0.78em; padding: 2px 9px; border-radius: 12px; font-weight: 700; margin: 0 2px; }
+  .b-blue   { background: #dbeafe; color: #1e40af; }
+  .b-green  { background: #d1fae5; color: #065f46; }
+  .b-red    { background: #fee2e2; color: #991b1b; }
+  .b-gold   { background: #fef3c7; color: #92400e; }
+  .b-gray   { background: #f1f5f9; color: #475569; }
+  .b-purple { background: #ede9fe; color: #5b21b6; }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 0.89em; margin: 14px 0; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border-radius: 6px; overflow: hidden; }
+  th { background: #0369a1; color: #fff; font-weight: 600; text-align: left; padding: 9px 13px; }
+  td { padding: 8px 13px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  tr:last-child td { border-bottom: none; }
+
+  /* ── Pipeline diagram ── */
+  .pipeline {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 0;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 20px 24px; margin: 16px 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .pipe-step {
+    display: flex; flex-direction: column; align-items: center;
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+    padding: 10px 14px; text-align: center; min-width: 110px;
+  }
+  .pipe-icon  { font-size: 1.4rem; margin-bottom: 4px; }
+  .pipe-label { font-size: 0.78rem; font-weight: 700; color: #1e40af; }
+  .pipe-sub   { font-size: 0.7rem; color: #6b7280; margin-top: 2px; }
+  .pipe-arrow { color: #94a3b8; font-size: 1.2rem; padding: 0 6px; }
+
+  /* ── Win/Fail rows ── */
+  .wf-row {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 12px 0; border-bottom: 1px solid #f1f5f9;
+  }
+  .wf-row:last-child { border-bottom: none; }
+  .wf-icon { font-size: 1.4rem; flex-shrink: 0; width: 32px; text-align: center; }
+  .wf-body h4 { font-size: 0.93rem; font-weight: 700; color: #1a1a1a; margin-bottom: 3px; }
+  .wf-body p  { font-size: 0.87rem; color: #6b7280; margin: 0; line-height: 1.5; }
+
+  /* ── Timeline ── */
+  .timeline { display: flex; align-items: center; gap: 0; margin: 20px 0; overflow-x: auto; padding-bottom: 8px; }
+  .tl-node  { display: flex; flex-direction: column; align-items: center; min-width: 70px; }
+  .tl-dot   { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.78em; color: #fff; }
+  .tl-dot.best    { background: #d97706; }
+  .tl-dot.better  { background: #059669; }
+  .tl-dot.neutral { background: #6b7280; }
+  .tl-label { font-size: 0.68em; color: #6b7280; margin-top: 4px; text-align: center; }
+  .tl-score { font-size: 0.68em; font-weight: 600; color: #1a1a1a; }
+  .tl-line  { flex: 1; height: 3px; background: #e5e7eb; min-width: 16px; }
+
+  /* ── TOC ── */
+  .toc { background: #f1f5f9; border-radius: 8px; padding: 16px 22px; margin: 0 0 32px; }
+  .toc-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
+  .toc-item {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 12px 14px; text-align: center; cursor: pointer;
+    text-decoration: none; color: inherit;
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+  .toc-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
+  .toc-num   { font-size: 1.1rem; font-weight: 800; color: #0369a1; }
+  .toc-label { font-size: 0.76rem; color: #475569; margin-top: 2px; line-height: 1.3; }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center; padding: 28px 20px;
+    color: #94a3b8; font-size: 0.82rem;
+    border-top: 1px solid #e5e7eb; background: #fff;
+  }
+  .member-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 14px; }
+  .member-tag  { background: #f1f5f9; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 16px; text-align: center; }
+  .member-name { font-size: 0.9rem; font-weight: 700; color: #1e40af; }
+  .member-score{ font-size: 0.8rem; color: #6b7280; margin-top: 1px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 700px) {
+    .two-col, .three-col { grid-template-columns: 1fr; }
+    .toc-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero h1 { font-size: 1.4rem; }
+    .hero-scores { gap: 10px; }
+    .pipeline { flex-direction: column; }
+    .pipe-arrow { transform: rotate(90deg); }
+  }
+  @media (min-width: 701px) and (max-width: 900px) {
+    .toc-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-kicker">NTU SCTP Module 3 &bull; Kaggle Regression Challenge</div>
+    <h1>HDB Resale Price Prediction &mdash; Team Presentation</h1>
+    <p class="hero-sub">What we built, why we built it, what worked, and what didn&rsquo;t</p>
+    <div class="hero-scores">
+      <div class="hs-item gold">
+        <div class="hs-num">$21,257</div>
+        <div class="hs-label">Best Team RMSE (final)</div>
+      </div>
+      <div class="hs-item green">
+        <div class="hs-num">$21,035</div>
+        <div class="hs-label">Best Individual RMSE (Lanson)</div>
+      </div>
+      <div class="hs-item">
+        <div class="hs-num">#4</div>
+        <div class="hs-label">Leaderboard position</div>
+      </div>
+      <div class="hs-item white">
+        <div class="hs-num">20+</div>
+        <div class="hs-label">Experiments &bull; v1&ndash;v20 + Team</div>
+      </div>
+      <div class="hs-item green">
+        <div class="hs-num">&minus;$4,607</div>
+        <div class="hs-label">Total improvement from v1 ($25,943)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Navigation -->
+  <div class="toc">
+    <strong style="color:#0369a1; font-size:0.85rem;">SECTIONS</strong>
+    <div class="toc-grid">
+      <a class="toc-item" href="#s1">
+        <div class="toc-num">1</div>
+        <div class="toc-label">Overall Strategy</div>
+      </a>
+      <a class="toc-item" href="#s2">
+        <div class="toc-num">2</div>
+        <div class="toc-label">Feature Engineering</div>
+      </a>
+      <a class="toc-item" href="#s3">
+        <div class="toc-num">3</div>
+        <div class="toc-label">Modelling &amp; Experiments</div>
+      </a>
+      <a class="toc-item" href="#s4">
+        <div class="toc-num">4</div>
+        <div class="toc-label">Validation</div>
+      </a>
+      <a class="toc-item" href="#s5">
+        <div class="toc-num">5</div>
+        <div class="toc-label">Wins, Failures &amp; Next</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── SECTION 1 ─────────────────────────── -->
+  <div class="section-label" id="s1">&#127919; Section 1 — Overall Strategy</div>
+
+  <h2>1. Overall Strategy</h2>
+
+  <h3>Phase 1 — Individual work</h3>
+  <p>Each member worked independently on their own model. Every day, each member submitted their best prediction to Kaggle and the team tracked the <strong>top 5 scores on the leaderboard</strong>. This kept everyone focused on improvement and gave visibility into how different approaches compared.</p>
+
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-icon">&#128101;</div>
+      <div class="pipe-label">Each Member</div>
+      <div class="pipe-sub">own model</div>
+    </div>
+    <div class="pipe-arrow">&#8594;</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">&#9881;&#65039;</div>
+      <div class="pipe-label">Feature Eng.</div>
+      <div class="pipe-sub">independently</div>
+    </div>
+    <div class="pipe-arrow">&#8594;</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">&#127919;</div>
+      <div class="pipe-label">Daily Submit</div>
+      <div class="pipe-sub">best prediction</div>
+    </div>
+    <div class="pipe-arrow">&#8594;</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">&#128202;</div>
+      <div class="pipe-label">Track Top 5</div>
+      <div class="pipe-sub">leaderboard</div>
+    </div>
+    <div class="pipe-arrow">&#8594;</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">&#128260;</div>
+      <div class="pipe-label">Iterate</div>
+      <div class="pipe-sub">until hit a ceiling</div>
+    </div>
+  </div>
+
+  <h3>Phase 2 — Team ensemble (when individual gains hit a ceilinged)</h3>
+  <p>Once individual scores stopped improving significantly, we combined each member's best submission into a team ensemble. Since every member had trained a completely different model, their prediction errors were <strong>partially uncorrelated</strong> — blending them cancels noise and reduces RMSE without any new model training.</p>
+
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-icon">&#128196;</div>
+      <div class="pipe-label">6 Best Submissions</div>
+      <div class="pipe-sub">one per member</div>
+    </div>
+    <div class="pipe-arrow">&#8594;</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">&#9878;&#65039;</div>
+      <div class="pipe-label">Blend Strategies</div>
+      <div class="pipe-sub">equal / weighted / rank</div>
+    </div>
+    <div class="pipe-arrow">&#8594;</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">&#128202;</div>
+      <div class="pipe-label">Compare</div>
+      <div class="pipe-sub">Kaggle result</div>
+    </div>
+    <div class="pipe-arrow">&#8594;</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">&#129351;</div>
+      <div class="pipe-label">Best Blend</div>
+      <div class="pipe-sub">3-member weighted</div>
+    </div>
+  </div>
+
+  <div class="highlight">
+    <strong>Result:</strong> Best individual was $21,035 (Lanson). Best team blend was <strong>$21,257</strong> (MengHai + Lanson + Likhong, 1/RMSE&sup2; weighted) — a $300 improvement with no new model training, purely from error cancellation.
+  </div>
+
+  <h3>MengHai's individual pipeline (v16)</h3>
+  <div class="two-col">
+    <div class="card card-border-blue">
+      <h3>Why 4 base models?</h3>
+      <p>HDB prices are driven by both <strong>location</strong> (town, street, postal sector) and <strong>flat characteristics</strong> (model, storey, lease). No single algorithm captures all interactions equally.</p>
+      <ul>
+        <li><strong>XGBoost + LightGBM</strong> — different tree-split patterns; LightGBM is faster on high-cardinality data</li>
+        <li><strong>ExtraTrees</strong> — random splits add bagging diversity; errors partially uncorrelated with boosters</li>
+        <li><strong>CatBoost</strong> — symmetric trees learn different patterns; handles categoricals natively</li>
+      </ul>
+    </div>
+    <div class="card card-border-gold">
+      <h3>Why Ridge meta-learner?</h3>
+      <p>Ridge learns the <strong>optimal blend weight</strong> for each base model across folds — adapting to which model is stronger for different price segments.</p>
+      <ul>
+        <li>Fixed blending (e.g. 50/50) is arbitrary; Ridge finds data-driven weights</li>
+        <li>L2 regularisation prevents over-relying on one model when OOF signals are noisy</li>
+        <li>Interpretable: weights tell us which model the market trusts most</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Actual Ridge weights from v16 (our best individual model)</h3>
+  <table>
+    <thead>
+      <tr><th>Model</th><th>Weight</th><th>Individual OOF RMSE</th><th>Why this weight?</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>LightGBM</strong></td>
+        <td><strong style="color:#059669;">36.7%</strong></td>
+        <td>$21,778</td>
+        <td>Strongest individual performer; leaf-wise growth fits HDB price patterns well</td>
+      </tr>
+      <tr>
+        <td><strong>XGBoost</strong></td>
+        <td><strong style="color:#059669;">34.3%</strong></td>
+        <td>$21,823</td>
+        <td>Close to LGBM; depth-wise growth captures different split patterns</td>
+      </tr>
+      <tr>
+        <td><strong>CatBoost</strong></td>
+        <td>17.3%</td>
+        <td>$22,609</td>
+        <td>Weaker individually but adds diversity via symmetric tree structure</td>
+      </tr>
+      <tr>
+        <td><strong>ExtraTrees</strong></td>
+        <td>12.0%</td>
+        <td>$23,373</td>
+        <td>Weakest individually but random splits produce uncorrelated errors — still helps</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="score-box" style="margin-top:12px;">
+    <div class="score-item">
+      <div class="score-num">0.001</div>
+      <div class="score-label">Best Ridge alpha</div>
+      <div class="score-delta sd-green">Very light regularisation — Ridge was confident in the weights</div>
+    </div>
+    <div class="score-item">
+      <div class="score-num">$21,552</div>
+      <div class="score-label">Final OOF RMSE after blending</div>
+      <div class="score-delta sd-green">Better than any single model</div>
+    </div>
+    <div class="score-item">
+      <div class="score-num">$21,552</div>
+      <div class="score-label">Kaggle RMSE</div>
+      <div class="score-delta sd-green">Zero OOF-Kaggle gap — no overfitting</div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── SECTION 2 ─────────────────────────── -->
+  <div class="section-label" id="s2">&#9881;&#65039; Section 2 — Data Processing &amp; Feature Engineering</div>
+
+  <h2>2. Feature Engineering</h2>
+
+  <h3>Why OOF target encoding over one-hot or label encoding?</h3>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>How</th><th>Problem</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge b-gray">One-hot</span></td>
+        <td>26 towns &times; 20 flat models = hundreds of sparse columns</td>
+        <td>Trees waste splits on low-variance columns</td>
+      </tr>
+      <tr>
+        <td><span class="badge b-gray">Label encoding</span></td>
+        <td>Assign integers to categories</td>
+        <td>Implies false ordering ("BEDOK=3 &gt; ANG MO KIO=1" means nothing)</td>
+      </tr>
+      <tr>
+        <td><span class="badge b-green">OOF median</span></td>
+        <td>Group median resale price, computed on out-of-fold rows only</td>
+        <td style="color:#059669;font-weight:600;">Injects real market signal; no target leakage</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>Did we validate this?</strong> Partially — but not a clean head-to-head comparison. In <strong>v8 &rarr; v9</strong>, we switched from ordinal postal encoding (9,125 raw block levels treated as integers) to OOF <code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.85em;">postal_sector_median_price</code> and Kaggle improved $21,805 &rarr; $21,755 (&minus;$50). This shows OOF beats label/ordinal encoding for postal — but the granularity also changed (block-level &rarr; sector-level), so it is not a pure A/B test. We did <em>not</em> run a controlled ablation replacing OOF with one-hot for town or flat_model. The broader claim is supported by theory and Kaggle convention, not a direct experiment.
+  </div>
+
+  <div class="highlight">
+    <strong>What we did validate (v8 &rarr; v9):</strong> Switching from ordinal postal encoding to OOF postal-sector median gave &minus;$50 Kaggle RMSE. Adding <code style="background:#1e293b;color:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:0.87em;">postal_sector_median_price</code> (598 groups) captures micro-location price gradients that <code style="background:#1e293b;color:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:0.87em;">town_median_price</code> (26 groups) misses entirely.
+  </div>
+
+  <h3>4 OOF encodings used in final model</h3>
+  <table>
+    <thead>
+      <tr><th>Encoding</th><th>Groups</th><th>Why it adds signal</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:2px 5px;border-radius:3px;font-size:0.85em;">town_median_price</code></td><td>26</td><td>Macro-location premium (mature vs non-mature estates)</td></tr>
+      <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:2px 5px;border-radius:3px;font-size:0.85em;">postal_sector_median_price</code></td><td>598</td><td>Micro-location; captures street-level price gradients</td></tr>
+      <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:2px 5px;border-radius:3px;font-size:0.85em;">flat_model_median_price</code></td><td>~20</td><td>Premium for Maisonette, DBSS, Multi-Gen vs standard models</td></tr>
+      <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:2px 5px;border-radius:3px;font-size:0.85em;">town_flat_type_median_price</code></td><td>~140</td><td>Interaction: 5-ROOM in Bishan ≠ 5-ROOM in Jurong West</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Complete feature list (~40 features into model)</h3>
+
+  <div class="two-col" style="margin-bottom:16px;">
+    <div>
+      <p style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;margin-bottom:8px;">Raw features (kept from dataset)</p>
+      <table>
+        <thead><tr><th>Feature</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">floor_area_sqm</code></td><td>Flat size in sqm</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">mid_storey</code></td><td>Floor level (midpoint of storey range)</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">max_floor_lvl</code></td><td>Highest floor in the block</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">Tranc_Year / Tranc_Month</code></td><td>Transaction year and month</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">lease_commence_date</code></td><td>Year lease started</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">total_dwelling_units</code></td><td>Total units in the block</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">mrt_nearest_distance</code></td><td>Distance to nearest MRT (m)</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">Mall_Nearest_Distance</code></td><td>Distance to nearest mall (m)</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">Hawker_Nearest_Distance</code></td><td>Distance to nearest hawker (m)</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">Hawker/Mall_Within_500m/1km/2km</code></td><td>Count of amenities within radius</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">Latitude / Longitude</code></td><td>GPS coordinates</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">flat_type, town, flat_model, street_name</code></td><td>Categorical identifiers</td></tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;margin:16px 0 8px;">OOF target encodings</p>
+      <table>
+        <thead><tr><th>Feature</th><th>Groups</th><th>Signal captured</th></tr></thead>
+        <tbody>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">town_median_price</code></td><td>26</td><td>Macro-location premium</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">postal_sector_median_price</code></td><td>598</td><td>Micro-location gradient</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">flat_model_median_price</code></td><td>~20</td><td>Model premium (Maisonette, DBSS…)</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">town_flat_type_median_price</code></td><td>~140</td><td>Town × flat type interaction</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <p style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;margin-bottom:8px;">Engineered features</p>
+      <table>
+        <thead><tr><th>Feature</th><th>How / Why</th></tr></thead>
+        <tbody>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">remaining_lease</code></td><td>99 &minus; (Tranc_Year &minus; lease_commence_date)</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">log_remaining_lease</code></td><td>log1p transform — compresses long-tail</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">lease_below_60</code></td><td>Binary flag: CPF rules change below 60 yrs</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">lease_x_below60</code></td><td>remaining_lease &times; lease_below_60</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">lease_x_area</code></td><td>remaining_lease &times; floor_area_sqm</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">dist_to_cbd</code></td><td>Haversine km to Raffles Place</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">log_dist_to_cbd</code></td><td>log1p(dist_to_cbd)</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">dist_x_storey</code></td><td>dist_to_cbd &times; mid_storey</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">is_mature_estate</code></td><td>Binary flag for 15 mature HDB towns</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">tranc_month_sin/cos</code></td><td>Cyclical encoding — Jan and Dec are adjacent</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">amenity_score</code></td><td>Normalised inverse-distance: MRT + mall + hawker</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">total_sold / total_rental</code></td><td>Sum of sold/rental units across all room types</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">rental_ratio</code></td><td>total_rental / total_dwelling_units</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">floor_area_per_room</code></td><td>floor_area_sqm / num_rooms</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">street_freq</code></td><td>Transaction count for this street in train set</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">block_num</code></td><td>Numeric part of block ID</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">postal_sector</code></td><td>First 4 digits of postal code</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">flat_type_rank</code></td><td>Ordered rank 1–7 by flat type size</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">storey_x_flattype</code></td><td>mid_storey &times; flat_type_rank</td></tr>
+          <tr><td><code style="background:#1e293b;color:#e2e8f0;padding:1px 5px;border-radius:3px;font-size:0.82em;">storey_pct</code></td><td>mid_storey / max_floor_lvl (relative floor position)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h3>Why per-fold re-encoding inside the stacking loop?</h3>
+  <div class="note">
+    If we computed OOF encodings once globally and reused across folds, the fold-validation rows' prices would leak into their own feature values. We recompute the group median inside <em>each fold</em> using only fold-train rows. This adds ~30s per run but eliminates leakage — the OOF RMSE stays a true holdout estimate.
+  </div>
+
+  <h3>Key interaction features</h3>
+  <div class="three-col">
+    <div class="card card-border-blue">
+      <h3>storey &times; flat_type</h3>
+      <p style="font-size:0.85rem;">A high floor in a 1-ROOM flat carries a larger relative premium than in a 5-ROOM. Multiplying storey rank by flat type rank captures this non-linearity.</p>
+    </div>
+    <div class="card card-border-gold">
+      <h3>lease_below_60 flag</h3>
+      <p style="font-size:0.85rem;">CPF financing rules change when remaining lease falls below 60 years, creating a structural price break. A binary flag lets the model learn this discontinuity explicitly.</p>
+    </div>
+    <div class="card card-border-green">
+      <h3>lease &times; floor area</h3>
+      <p style="font-size:0.85rem;">Older + larger flats depreciate differently than older + smaller. The interaction captures this combined non-linearity that neither feature alone can express.</p>
+    </div>
+  </div>
+
+  <h3>Features we tried and rejected</h3>
+  <table>
+    <thead>
+      <tr><th>Feature</th><th>Why it seemed good</th><th>Why rejected</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>H3 hexagon geospatial</td>
+        <td>Sub-km spatial precision</td>
+        <td>Redundant with <code style="background:#1e293b;color:#e2e8f0;padding:1px 4px;border-radius:3px;font-size:0.82em;">postal_sector_median_price</code> which already encodes location at fine granularity</td>
+      </tr>
+      <tr>
+        <td>School name OOF encoding</td>
+        <td>177 schools → premium signal</td>
+        <td>No signal beyond postal sector; added noise without improving OOF</td>
+      </tr>
+      <tr>
+        <td>Comparable sales (6-month rolling median)</td>
+        <td>Buyers compare to recent nearby sales</td>
+        <td>Collinear with existing OOF encodings; added redundant signal +$225 worse OOF</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ─────────────────────────── SECTION 3 ─────────────────────────── -->
+  <div class="section-label" id="s3">&#129302; Section 3 — Modelling &amp; Experiments</div>
+
+  <h2>3. Modelling &amp; Experiment</h2>
+
+  <h3>Progression from v1 to v16</h3>
+
+  <div class="timeline">
+    <div class="tl-node">
+      <div class="tl-dot neutral">v1</div>
+      <div class="tl-label">RF<br>Baseline</div>
+      <div class="tl-score">$25,943</div>
+    </div>
+    <div class="tl-line"></div>
+    <div class="tl-node">
+      <div class="tl-dot better">v3</div>
+      <div class="tl-label">XGB</div>
+      <div class="tl-score">$22,801</div>
+    </div>
+    <div class="tl-line"></div>
+    <div class="tl-node">
+      <div class="tl-dot better">v6</div>
+      <div class="tl-label">Log+OOF</div>
+      <div class="tl-score">$22,124</div>
+    </div>
+    <div class="tl-line"></div>
+    <div class="tl-node">
+      <div class="tl-dot better">v7</div>
+      <div class="tl-label">2-model<br>Stack</div>
+      <div class="tl-score">$21,906</div>
+    </div>
+    <div class="tl-line"></div>
+    <div class="tl-node">
+      <div class="tl-dot better">v8</div>
+      <div class="tl-label">+ET<br>3-model</div>
+      <div class="tl-score">$21,805</div>
+    </div>
+    <div class="tl-line"></div>
+    <div class="tl-node">
+      <div class="tl-dot better">v9</div>
+      <div class="tl-label">+OOF<br>postal</div>
+      <div class="tl-score">$21,755</div>
+    </div>
+    <div class="tl-line"></div>
+    <div class="tl-node">
+      <div class="tl-dot better">v14b</div>
+      <div class="tl-label">Interactions<br>+HPO</div>
+      <div class="tl-score">$21,615</div>
+    </div>
+    <div class="tl-line"></div>
+    <div class="tl-node">
+      <div class="tl-dot best">v16</div>
+      <div class="tl-label">+CatBoost<br>4-model</div>
+      <div class="tl-score">$21,552</div>
+    </div>
+    <div class="tl-line"></div>
+    <div class="tl-node">
+      <div class="tl-dot best">Team</div>
+      <div class="tl-label">Ensemble<br>blend</div>
+      <div class="tl-score">$21,257</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card card-border-blue">
+      <h3>Why Optuna Bayesian HPO over grid/random search?</h3>
+      <ul>
+        <li><strong>Grid search</strong> — with 8+ params per model, 8&sup8; = 16M combinations; infeasible</li>
+        <li><strong>Random search</strong> — explores uniformly; wastes trials in low-quality regions</li>
+        <li><strong>Optuna TPE</strong> — builds a probabilistic model of which parameter regions are promising; focuses trials there. 100 trials ≈ near-optimal with a fraction of compute</li>
+      </ul>
+    </div>
+    <div class="card card-border-purple">
+      <h3>Why team ensemble as the final step?</h3>
+      <p>Each member trained a completely different model (different features, algorithm, HPO). Their test-set errors are partially uncorrelated.</p>
+      <p style="margin-top:8px;">Averaging two predictions where errors partially cancel reduces RMSE even if one model is weaker — the same mathematical reason 4-model stacking beats any single model.</p>
+    </div>
+  </div>
+
+  <h3>The CatBoost overfitting lesson (v20)</h3>
+  <div class="warning">
+    <strong>What happened:</strong> CatBoost Optuna was tuned on a single 80/20 random split. Best trial (depth=10, 1994 iters) minimised loss on <em>one specific</em> 20% holdout.<br><br>
+    Inside our 5-fold CV, those params overfit — CatBoost OOF RMSE $21,780, but Ridge gave it <strong>36.6% weight</strong> and Kaggle came back $21,827 (+$362 gap vs OOF $21,465).<br><br>
+    <strong>Fix:</strong> Always tune inside the same CV strategy as training (5-fold CV in the Optuna objective function).
+  </div>
+
+  <h3>Team ensemble results</h3>
+  <table>
+    <thead>
+      <tr><th>Blend</th><th>Members</th><th>Strategy</th><th>Kaggle RMSE</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>6-member equal</td>
+        <td>All 6</td>
+        <td>Simple average</td>
+        <td>$21,754</td>
+      </tr>
+      <tr>
+        <td>6-member weighted</td>
+        <td>All 6</td>
+        <td>1/RMSE&sup2;</td>
+        <td>$21,772</td>
+      </tr>
+      <tr>
+        <td>3-member weighted</td>
+        <td>MengHai + Lanson + Likhong</td>
+        <td>1/RMSE&sup2;</td>
+        <td><strong style="color:#059669;">$21,257 &#9733; Best</strong></td>
+      </tr>
+      <tr>
+        <td>3-member weighted</td>
+        <td>Lanson + Ben + MengHai</td>
+        <td>1/RMSE&sup2;</td>
+        <td><span style="color:#dc2626;">$22,110 (worse)</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>Why 6-member &gt; 3-member sometimes?</strong> Adding weaker members (Hueyling $23,000, Lai $22,536) dilutes stronger ones. The 6-member equal blend pushed results to $21,754 vs $21,257 for 3 focused members. More members &ne; better blend unless everyone is competitive.
+  </div>
+
+  <!-- ─────────────────────────── SECTION 4 ─────────────────────────── -->
+  <div class="section-label" id="s4">&#128202; Section 4 — Validation</div>
+
+  <h2>4. Validation Strategy</h2>
+
+  <div class="score-box">
+    <div class="score-item">
+      <div class="score-num">5-Fold KFold</div>
+      <div class="score-label">Primary CV strategy</div>
+      <div class="score-delta sd-green">OOF-Kaggle gap &lt;$200 (v7&ndash;v16)</div>
+    </div>
+    <div class="score-item">
+      <div class="score-num">Ridge weights</div>
+      <div class="score-label">Overfitting signal</div>
+      <div class="score-delta sd-green">Unexpected jump flags bad params early</div>
+    </div>
+  </div>
+
+  <div class="card card-border-blue">
+    <h3>Why 5-fold KFold (not TimeSeriesSplit)?</h3>
+    <p>Train data spans 9 years; test set is drawn from the same distribution. TimeSeriesSplit would penalise early folds unfairly by training on only a small slice of history.</p>
+    <p>The OOF-Kaggle alignment across v7&ndash;v16 (gaps under $200) validated this choice empirically.</p>
+  </div>
+
+  <h3>Ridge weight monitoring as an overfitting detector</h3>
+  <table>
+    <thead>
+      <tr><th>Version</th><th>CatBoost weight</th><th>OOF RMSE</th><th>Kaggle RMSE</th><th>Gap</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge b-green">v16</span></td>
+        <td>17%</td>
+        <td>$21,552</td>
+        <td>$21,552</td>
+        <td style="color:#059669;font-weight:600;">$0</td>
+      </tr>
+      <tr>
+        <td><span class="badge b-red">v20</span></td>
+        <td><strong>36.6%</strong> &#9650;</td>
+        <td>$21,465</td>
+        <td>$21,827</td>
+        <td style="color:#dc2626;font-weight:600;">+$362 &#9888;</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="highlight">
+    The CatBoost weight jumping from 17% to 36.6% was the warning sign — before we even saw the Kaggle result, we knew something unusual had happened with v20's CatBoost params.
+  </div>
+
+  <!-- ─────────────────────────── SECTION 5 ─────────────────────────── -->
+  <div class="section-label" id="s5">&#127942; Section 5 — Wins, Failures &amp; What&rsquo;s Next</div>
+
+  <h2>5. Wins, Failures &amp; What&rsquo;s Next</h2>
+
+  <div class="two-col">
+
+    <!-- WINS -->
+    <div class="card card-border-green">
+      <h3 style="color:#059669;">&#9989; What Worked</h3>
+      <div class="wf-row">
+        <div class="wf-icon">&#129351;</div>
+        <div class="wf-body">
+          <h4>OOF target encoding</h4>
+          <p>postal_sector + flat_model + town&times;flat_type + year. Captured the market's own price signal without leakage. Largest structural improvement in the pipeline.</p>
+        </div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-icon">&#129352;</div>
+        <div class="wf-body">
+          <h4>CatBoost as 4th stacker (v16)</h4>
+          <p>Symmetric tree structure learns different patterns than XGB/LGBM asymmetric trees. Diversity alone added ~$250 OOF improvement. Zero OOF-Kaggle gap at v16.</p>
+        </div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-icon">&#129353;</div>
+        <div class="wf-body">
+          <h4>3-member team ensemble</h4>
+          <p>$300 improvement over best individual with <em>no new model training</em> — purely from error cancellation across 3 different modelling approaches.</p>
+        </div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-icon">&#9989;</div>
+        <div class="wf-body">
+          <h4>MLflow + CONFIG-driven pipeline</h4>
+          <p>Eliminated ~400 lines of boilerplate per experiment. One CONFIG dict drives the entire pipeline; MLflow logs everything automatically.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAILURES -->
+    <div class="card card-border-red">
+      <h3 style="color:#dc2626;">&#10060; What Didn&rsquo;t Work</h3>
+      <div class="wf-row">
+        <div class="wf-icon">&#128683;</div>
+        <div class="wf-body">
+          <h4>H3 geospatial hexagon features</h4>
+          <p>Engineered sub-km location features, but postal_sector OOF already captured the location signal more cleanly. Redundant and slower to compute.</p>
+        </div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-icon">&#128683;</div>
+        <div class="wf-body">
+          <h4>CatBoost Optuna on 80/20 split (v20)</h4>
+          <p>Seemed best in isolation (OOF $21,465) but overfit on Kaggle ($21,827, +$362 gap). Lesson: always tune inside the same CV as training.</p>
+        </div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-icon">&#128683;</div>
+        <div class="wf-body">
+          <h4>6-member team ensemble</h4>
+          <p>More members &ne; better blend. Weaker models (Hueyling $23k, Lai $22.5k) diluted stronger ones. 6-member equal blend ($21,754) worse than 3-member focused ($21,257).</p>
+        </div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-icon">&#128683;</div>
+        <div class="wf-body">
+          <h4>Comparable sales features</h4>
+          <p>Rolling 6-month comp median by town+flat_model — the idea was right but OOF encodings already saturated that signal. Adding both added noise (+$225 OOF).</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- WHAT'S NEXT -->
+  <div class="card card-border-gold" style="margin-top:8px;">
+    <h3 style="color:#d97706;">&#128300; What&rsquo;s Next — Given No Time Constraint</h3>
+    <div class="two-col" style="margin-top:12px;">
+      <div>
+        <div class="wf-row">
+          <div class="wf-icon">&#128295;</div>
+          <div class="wf-body">
+            <h4>Fix CatBoost HPO</h4>
+            <p>Retune with 5-fold CV inside Optuna to close the $362 OOF-Kaggle gap. Should make v20-class models competitive individually.</p>
+          </div>
+        </div>
+        <div class="wf-row">
+          <div class="wf-icon">&#9878;&#65039;</div>
+          <div class="wf-body">
+            <h4>OOF grid search for ensemble weights</h4>
+            <p>Instead of 1/RMSE&sup2; heuristic, minimise ensemble OOF RMSE directly over blend weights. More principled and data-driven.</p>
+          </div>
+        </div>
+        <div class="wf-row">
+          <div class="wf-icon">&#128203;</div>
+          <div class="wf-body">
+            <h4>(town, flat_model, year) triple OOF encoding</h4>
+            <p>Captures "how have 4-ROOM Model A flats in Bedok moved over time?" — more granular than current separate pairs.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="wf-row">
+          <div class="wf-icon">&#129504;</div>
+          <div class="wf-body">
+            <h4>Neural network as 5th stacker</h4>
+            <p>TabNet or simple MLP — entirely different inductive bias from tree methods; potentially orthogonal errors that further diversify the stack.</p>
+          </div>
+        </div>
+        <div class="wf-row">
+          <div class="wf-icon">&#128101;</div>
+          <div class="wf-body">
+            <h4>Every member improves their individual model</h4>
+            <p>Each 1% improvement in any individual model feeds through to the team ensemble for free — compounding gains with no ensemble overhead.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main -->
+
+<!-- Footer -->
+<div class="footer">
+  <strong>Team 3</strong> &bull; NTU SCTP Advanced Professional Certificate in Data Science &amp; AI &bull; Module 3.4 Supervised Learning Advanced
+  <div class="member-grid">
+    <div class="member-tag">
+      <div class="member-name">Lanson</div>
+      <div class="member-score">$21,035</div>
+    </div>
+    <div class="member-tag">
+      <div class="member-name">Ben</div>
+      <div class="member-score">$21,343</div>
+    </div>
+    <div class="member-tag">
+      <div class="member-name">MengHai</div>
+      <div class="member-score">$21,552</div>
+    </div>
+    <div class="member-tag">
+      <div class="member-name">Likhong</div>
+      <div class="member-score">$21,831</div>
+    </div>
+    <div class="member-tag">
+      <div class="member-name">Lai</div>
+      <div class="member-score">$22,536</div>
+    </div>
+    <div class="member-tag">
+      <div class="member-name">Hueyling</div>
+      <div class="member-score">$23,000</div>
+    </div>
+  </div>
+  <p style="margin-top:16px;">Best Team: <strong style="color:#059669;">$21,256.57</strong> &nbsp;&bull;&nbsp; Leaderboard: <strong style="color:#0369a1;">#4</strong> &nbsp;&bull;&nbsp; Last updated: 2026-05-02</p>
+</div>
+
+</body>
+</html>
