@@ -50,3 +50,9 @@ mlflow.db
 
 # ── Team submission CSVs (personal names in filenames) ───────────────────
 outputs/submissions/Team Submission/
+
+# ── Member folders — exclude large binaries ───────────────────────────────
+members/*/materials/*.pkl
+members/*/materials/*.joblib
+members/*/materials/*.zip
+members/*/.DS_Store
