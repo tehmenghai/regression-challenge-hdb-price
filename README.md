@@ -1,6 +1,9 @@
 # HDB Price Regression Challenge
 
-## Current Best Score
+## Final Result
+
+**Private Leaderboard RMSE: $21,256.57** — 3-member weighted ensemble (v20)
+
 | Version | Model | Kaggle Public RMSE | Status |
 |---|---|---|---|
 | v1 | RF Baseline | 25,943.38 | ✅ submitted |
@@ -10,7 +13,8 @@
 | v5 | Blend 45% XGB + 55% LGBM Tuned | 22,428.34 | ✅ submitted |
 | v6 | Log target + OOF encoding + interaction features | 22,124.05 | ✅ submitted |
 | v7 | Stacking + street_freq (Ridge meta on XGB+LGBM OOF) | 21,905.74 | ✅ submitted |
-| **v8** | **3-model stack (XGB + LGBM + Extra Trees OOF)** | **21,804.67** | ✅ **best so far** |
+| v8 | 3-model stack (XGB + LGBM + Extra Trees OOF) | 21,804.67 | ✅ submitted |
+| **Team ensemble** | **3-member weighted ensemble (v20)** | **—** | ✅ **final submission → private $21,256.57** |
 
 Full tracker: `outputs/submission_tracker.xlsx`
 

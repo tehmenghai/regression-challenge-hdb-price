@@ -12,6 +12,8 @@ Led the end-to-end modelling pipeline from baseline to ensemble. My focus was on
 
 **Personal best:** Kaggle Public RMSE **$21,552** (v16 — CatBoost 4-model stack)
 
+**Final team result:** Private Leaderboard RMSE **$21,256.57** — 3-member weighted ensemble (v20), submitted as `20260429_3member_wt_v20.csv`
+
 ---
 
 ## Key Experiments
