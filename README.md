@@ -55,6 +55,14 @@ Full tracker: `outputs/submission_tracker.xlsx`
 │   ├── train_summary.xlsx            # EDA stats (info + describe)
 │   └── baseline_explained.md/.html  # Layman explanation of baseline
 │
+├── members/              # Individual member contributions
+│   ├── menghai/          # notebooks/ + materials/ + README
+│   ├── lanson/
+│   ├── ben/
+│   ├── likhong/
+│   ├── lai/
+│   └── shl/
+│
 └── predict_my_hdb.py     # Interactive price estimator (run: python predict_my_hdb.py)
 ```
 
