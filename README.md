@@ -2,19 +2,41 @@
 
 ## Final Result
 
-**Private Leaderboard RMSE: $21,256.57** — 3-member weighted ensemble (v20)
+**Private Leaderboard RMSE: $21,256.57** — 3-member weighted ensemble (v20)  
+Total improvement: –$4,687 (–18.1%) from v1 baseline over 21 submissions.
 
-| Version | Model | Kaggle Public RMSE | Status |
-|---|---|---|---|
-| v1 | RF Baseline | 25,943.38 | ✅ submitted |
-| v2 | RF + Feature Engineering | 27,582.06 | ✅ submitted |
-| v3 | XGBoost Tuned + FE | 22,800.92 | ✅ submitted |
-| v4 | LightGBM Default + FE | 24,951.72 | ✅ submitted |
-| v5 | Blend 45% XGB + 55% LGBM Tuned | 22,428.34 | ✅ submitted |
-| v6 | Log target + OOF encoding + interaction features | 22,124.05 | ✅ submitted |
-| v7 | Stacking + street_freq (Ridge meta on XGB+LGBM OOF) | 21,905.74 | ✅ submitted |
-| v8 | 3-model stack (XGB + LGBM + Extra Trees OOF) | 21,804.67 | ✅ submitted |
-| **Team ensemble** | **3-member weighted ensemble (v20)** | **—** | ✅ **final submission → private $21,256.57** |
+### Individual Submissions
+
+| Version | Model | OOF RMSE | Kaggle RMSE | Notes |
+|---|---|---|---|---|
+| v1 | RF Baseline | $25,871 | $25,943 | Benchmark |
+| v2 | RF + Feature Engineering | $26,564 | $27,582 | Worse — leakage |
+| v3 | XGBoost Tuned + FE | $22,748 | $22,801 | –$4,781 breakthrough |
+| v4 | LightGBM Default + FE | $24,348 | $24,952 | Worse |
+| v5 | Blend 45% XGB + 55% LGBM | $21,570 | $22,428 | First blend |
+| v6 | Log target + OOF encoding + interactions | $21,818 | $22,124 | Log transform wins |
+| v7 | Stack XGB+LGBM (Ridge meta) | $21,841 | $21,906 | First stack |
+| v8 | Stack XGB+LGBM+ET (Ridge meta) | $21,708 | $21,805 | Add ExtraTrees |
+| v9 | Stack + expanded OOF encoding | ~$21,708 | $21,756 | Richer OOF features |
+| v10–v13 | HPO + H3 geo + CatBoost experiments | $21,578 | $21,783 | Overfit on Kaggle |
+| v14b | Lease + interaction features | ~$21,593 OOF | — | Team blend only |
+| v15 | town×flat_type + Year OOF | $21,593 OOF | — | Team blend only |
+| v16 | CatBoost as 4th base model | $21,552 OOF | — | Best solo OOF |
+| v17 | Primary school OOF encoding | $21,556 OOF | — | No gain vs v16 |
+| v19 | LGBM + ET Optuna HPO | $21,533 OOF | — | Used in team blend |
+| v20 | All Optuna params (LGBM+ET+CatBoost) | $21,465 OOF | $21,827 | Overfit (gap $362) |
+
+### Team Ensemble Submissions
+
+| Submission | Method | Kaggle Public | Private | Notes |
+|---|---|---|---|---|
+| Ensemble-eq | Equal-weight (3-member) | $21,360 | — | |
+| Ensemble-wt | Weighted 1/RMSE² (3-member) | $21,351 | — | |
+| Ensemble-rk | Rank average (3-member) | $21,384 | — | |
+| 3member-v19 | Equal-weight with MengHai v19 | $21,366 | — | |
+| 4member-wt | Weighted incl. Lai | $21,661 | — | Scale drag |
+| 3member-equal-v20 | Equal-weight with MengHai v20 | $21,346 | — | |
+| **3member-wt-v20** | **Weighted with MengHai v20** | **$21,336** | **$21,256.57** | **Final submission** |
 
 Full tracker: `outputs/submission_tracker.xlsx`
 
@@ -97,10 +119,3 @@ Full tracker: `outputs/submission_tracker.xlsx`
 | `floor_area_per_room` | floor_area_sqm / rooms | Spaciousness signal |
 | `town_median_price` | town target encoding | Direct price signal per town |
 | `amenity_score` | MRT + Mall + Hawker distance | Composite convenience score |
-
----
-
-## Next Steps
-- [ ] Try **Optuna** hyperparameter tuning — Bayesian search, smarter than RandomizedSearchCV
-- [ ] Add `block_num` encoding — some block numbers carry premiums
-- [ ] More feature engineering — storey band interactions, age × estate maturity
