@@ -98,24 +98,24 @@
 <body>
 
 <h1>HDB Resale Price — Model Training Journey</h1>
-<p class="subtitle">Live document &mdash; update after every Kaggle submission &bull; Last updated: 2026-04-29</p>
+<p class="subtitle">Competition closed &bull; Private leaderboard revealed 2026-05-09</p>
 
-<!-- Current Best -->
+<!-- Final Result -->
 <div class="score-box">
   <div class="score-item">
-    <div class="score-num">$21,350.91</div>
-    <div class="score-label">Best Kaggle Public RMSE</div>
-    <div class="score-delta">🏆 Team Ensemble Weighted — #2 Leaderboard</div>
+    <div class="score-num">$21,256.57</div>
+    <div class="score-label">Final Private RMSE</div>
+    <div class="score-delta">🏆 3-member weighted ensemble (v20)</div>
   </div>
   <div class="score-item">
-    <div class="score-num">$108</div>
-    <div class="score-label">Gap to 1st place ($21,242.91)</div>
-    <div class="score-delta">1st = Group 9</div>
+    <div class="score-num">$21,335.57</div>
+    <div class="score-label">Best Public RMSE</div>
+    <div class="score-delta">3member-wt-v20 — final submission</div>
   </div>
   <div class="score-item">
-    <div class="score-num">–$4,592</div>
+    <div class="score-num">–$4,687</div>
     <div class="score-label">Total improvement from v1</div>
-    <div class="score-delta">–17.7% from $25,943</div>
+    <div class="score-delta">–18.1% from $25,943</div>
   </div>
   <div class="score-item">
     <div class="score-num">21</div>
@@ -453,9 +453,9 @@
   </tr>
   <tr style="background:#fffbeb;">
     <td><strong>3member-wt-v20</strong></td><td><strong>Weighted (MengHai v20 + Lanson + Likhong, 1/RMSE²)</strong></td><td><code>ensemble_team</code></td><td>—</td>
-    <td><strong>$21,335.57</strong></td><td>—</td>
+    <td><strong>$21,335.57</strong></td><td><strong>$21,256.57</strong></td>
     <td style="color:#059669;font-weight:600;">–$212 ↓</td>
-    <td><span class="badge b-gold">🏆 NEW BEST</span></td>
+    <td><span class="badge b-gold">🏆 FINAL SUBMISSION</span></td>
   </tr>
 </table>
 
@@ -1146,74 +1146,36 @@
 
 <hr class="divider">
 
-<!-- SECTION 6: WHAT'S NEXT -->
-<h2>6. What's Next</h2>
-<p>Current gap to 1st place: <strong>~$93</strong> (Group 9 = $21,242.91) &bull; Our best: <strong>$21,335.57</strong> (3member-wt-v20, 2026-04-29)</p>
+<!-- SECTION 6: FINAL RESULT -->
+<h2>6. Final Result</h2>
+<p>Competition closed 2026-05-09. Private leaderboard revealed.</p>
 
 <table>
-  <tr><th>#</th><th>Experiment</th><th>Expected gain</th><th>Status</th><th>Notes</th></tr>
-  <tr style="background:#f0fdf4;">
-    <td>1</td>
-    <td><strong>Retune LGBM + ET hyperparameters (Optuna)</strong></td>
-    <td>–$19 OOF</td>
-    <td><span class="badge b-green">✓ Done (v19)</span></td>
-    <td>Optuna 100-trial TPE on LGBM + 50-trial on ET. OOF RMSE $21,552 → $21,533 (–$19). Submitted as part of Team Ens-2 3-member variant ($21,366.39).</td>
-  </tr>
-  <tr style="background:#f0fdf4;">
-    <td>2</td>
-    <td><strong>Retune CatBoost hyperparameters (Optuna)</strong></td>
-    <td>–$827 individual OOF</td>
-    <td><span class="badge b-green">✓ Done (v20)</span></td>
-    <td>Optuna 100-trial TPE on CatBoost. Individual OOF $22,607 → $21,780 (–$827). Ridge weight 17% → 37% — now dominant model. Stack OOF $21,533 → $21,465 (–$68).</td>
+  <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+  <tr style="background:#fffbeb;">
+    <td><strong>🏆 Final Private RMSE</strong></td>
+    <td><strong>$21,256.57</strong></td>
+    <td>3-member weighted ensemble — MengHai v20 + Lanson + Likhong (1/RMSE² weights)</td>
   </tr>
   <tr>
-    <td>3</td>
-    <td><strong>Submit v20 to Kaggle</strong></td>
-    <td>–$68 OOF vs v19</td>
-    <td><span class="badge b-red">Done — Kaggle $21,827 (overfit)</span></td>
-    <td>OOF $21,465 but Kaggle $21,827 — gap $362 due to CatBoost Optuna overfitting on 80/20 split. Fix: retune CatBoost with 5-fold CV, or constrain depth ≤ 8 / iterations ≤ 1500.</td>
-  </tr>
-  <tr style="background:#f0fdf4;">
-    <td>4</td>
-    <td><strong>Test v20 in team ensemble (equal-weight)</strong></td>
-    <td>–$5 ↓ new best</td>
-    <td><span class="badge b-green">✓ Done — $21,345.60 NEW BEST</span></td>
-    <td>3-member equal-weight with MengHai v20 scored $21,345.60 — new best despite v20 individual being worse ($21,827). Diversity cancels errors even when one model is individually weaker.</td>
-  </tr>
-  <tr style="background:#f0fdf4;">
-    <td>5</td>
-    <td><strong>Submit 3member-wt-v20</strong></td>
-    <td>–$10 ↓ new best</td>
-    <td><span class="badge b-green">✓ Done — $21,335.57 NEW BEST</span></td>
-    <td>Weighted 3-member with MengHai v20. Lanson ~36%, MengHai ~34%, Likhong ~30%. Beats equal-weight by $10 — higher Lanson weight pays off.</td>
+    <td>Best Public RMSE</td>
+    <td>$21,335.57</td>
+    <td>Same submission (3member-wt-v20, 2026-04-29)</td>
   </tr>
   <tr>
-    <td>6</td>
-    <td><strong>Submit 3member-rank-v20</strong></td>
-    <td>unknown</td>
-    <td><span class="badge b-blue">Ready — file generated</span></td>
-    <td>Rank-avg variant still untried. Usually within $20 of weighted; worth one submission slot.</td>
+    <td>Public → Private improvement</td>
+    <td style="color:#059669;font-weight:600;">–$79 ↓</td>
+    <td>Model generalised well — private score better than public</td>
   </tr>
   <tr>
-    <td>6</td>
-    <td><strong>Optimise team ensemble weights via OOF</strong></td>
-    <td>–$10 to –$30</td>
-    <td><span class="badge b-blue">Not started</span></td>
-    <td>Grid-search blend weights over all team OOF predictions. May find better ratio than equal or 1/RMSE².</td>
+    <td>Total improvement from v1 baseline</td>
+    <td style="color:#059669;font-weight:600;">–$4,687 ↓ (–18.1%)</td>
+    <td>v1 RF baseline $25,943 → final private $21,256.57</td>
   </tr>
   <tr>
-    <td>4</td>
-    <td><strong>Optimise team ensemble weights via OOF</strong></td>
-    <td>–$20 to –$50</td>
-    <td><span class="badge b-blue">Not started</span></td>
-    <td>Grid-search blend weights over all team OOF predictions together instead of each member's Ridge meta ratios separately.</td>
-  </tr>
-  <tr>
-    <td>5</td>
-    <td><strong>Add more team member models for diversity</strong></td>
-    <td>–$10 to –$30</td>
-    <td><span class="badge b-blue">Not started</span></td>
-    <td>If any member improves their individual submission, re-run ensemble_team.ipynb with updated file. More model diversity = more error cancellation.</td>
+    <td>Total submissions</td>
+    <td>21</td>
+    <td>v1 through team ensemble</td>
   </tr>
 </table>
 
